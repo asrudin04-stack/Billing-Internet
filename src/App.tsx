@@ -68,8 +68,16 @@ export default function App() {
       localStorage.setItem('anet_customers', JSON.stringify(INITIAL_CUSTOMERS));
     }
 
-    if (rawPlans) setPlans(JSON.parse(rawPlans));
-    else {
+    if (rawPlans) {
+      const parsed = JSON.parse(rawPlans) as SpeedPlan[];
+      const hasAllDefault = INITIAL_PLANS.every(ip => parsed.some(p => p.id === ip.id));
+      if (!hasAllDefault) {
+        setPlans(INITIAL_PLANS);
+        localStorage.setItem('anet_plans', JSON.stringify(INITIAL_PLANS));
+      } else {
+        setPlans(parsed);
+      }
+    } else {
       setPlans(INITIAL_PLANS);
       localStorage.setItem('anet_plans', JSON.stringify(INITIAL_PLANS));
     }

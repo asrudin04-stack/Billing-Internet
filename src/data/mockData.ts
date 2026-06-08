@@ -2,6 +2,42 @@ import { SpeedPlan, Customer, Invoice, Ticket } from '../types';
 
 export const INITIAL_PLANS: SpeedPlan[] = [
   {
+    id: 'plan-eco-2',
+    name: 'ANet Lite 2M',
+    speedMbps: 2,
+    price: 50000,
+    type: 'Fiber',
+    ratio: '1:4',
+    description: 'Koneksi super ekonomis 2 Mbps, pas untuk berkirim pesan WhatsApp & browsing.'
+  },
+  {
+    id: 'plan-eco-3',
+    name: 'ANet Lite 3M',
+    speedMbps: 3,
+    price: 75000,
+    type: 'Fiber',
+    ratio: '1:4',
+    description: 'Koneksi hemat 3 Mbps, lancar berselancar media sosial & streaming musik.'
+  },
+  {
+    id: 'plan-eco-5',
+    name: 'ANet Starter 5M',
+    speedMbps: 5,
+    price: 100000,
+    type: 'Fiber',
+    ratio: '1:4',
+    description: 'Koneksi starter 5 Mbps, cocok untuk streaming video SD & belajar online.'
+  },
+  {
+    id: 'plan-eco-10',
+    name: 'ANet Eco 10M',
+    speedMbps: 10,
+    price: 150000,
+    type: 'Fiber',
+    ratio: '1:4',
+    description: 'Koneksi keluarga ekonomis 10 Mbps, andal untuk streaming HD & WFH ringan.'
+  },
+  {
     id: 'plan-lite',
     name: 'ANet Lite Fiber',
     speedMbps: 20,
