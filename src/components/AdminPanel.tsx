@@ -25,7 +25,11 @@ import {
   FileText,
   Download,
   CheckCircle2,
-  AlertTriangle
+  AlertTriangle,
+  Lock,
+  Key,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { Customer, Invoice, Ticket, SpeedPlan, CustomerStatus } from '../types';
 
@@ -43,6 +47,8 @@ interface AdminPanelProps {
   onApproveInvoiceManual: (invoiceId: string) => void;
   onSendTicketReply: (ticketId: string, replyMessage: string) => void;
   onUpdateTicketStatus: (ticketId: string, status: Ticket['status']) => void;
+  onUpdatePassword: (newPass: string) => void;
+  currentPasswordValue: string;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -58,11 +64,20 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onNewInvoice,
   onApproveInvoiceManual,
   onSendTicketReply,
-  onUpdateTicketStatus
+  onUpdateTicketStatus,
+  onUpdatePassword,
+  currentPasswordValue
 }) => {
-  // Tabs: 'customers' | 'billing' | 'tickets'
-  const [activeTab, setActiveTab] = useState<'customers' | 'billing' | 'tickets'>('customers');
+  // Tabs: 'customers' | 'billing' | 'tickets' | 'security'
+  const [activeTab, setActiveTab] = useState<'customers' | 'billing' | 'tickets' | 'security'>('customers');
   
+  // Password change states
+  const [oldPasswordInput, setOldPasswordInput] = useState('');
+  const [newPasswordInput, setNewPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [passError, setPassError] = useState<string | null>(null);
+  const [passSuccess, setPassSuccess] = useState<string | null>(null);
+
   // Search inputs
   const [customerSearch, setCustomerSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
@@ -506,6 +521,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               {openTicketCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('security')}
+          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+            activeTab === 'security'
+              ? 'bg-emerald-400 text-slate-950 shadow-md'
+              : 'text-slate-400 hover:text-slate-200'
+          }`}
+        >
+          <Lock className="w-4 h-4" />
+          Keamanan Sandi
         </button>
       </div>
 
@@ -1328,6 +1354,103 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             )}
           </div>
 
+        </div>
+      )}
+
+      {activeTab === 'security' && (
+        <div className="bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl max-w-xl mx-auto mt-4 space-y-6">
+          <div className="flex items-center gap-3 border-b border-slate-800 pb-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
+              <Key className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider">Ubah Kredensial Administrator</h3>
+              <p className="text-[11px] text-slate-400">Pastikan sandi baru Anda aman dan disimpan dengan baik.</p>
+            </div>
+          </div>
+
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            setPassError(null);
+            setPassSuccess(null);
+
+            if (oldPasswordInput !== currentPasswordValue) {
+              setPassError('Kata sandi lama tidak cocok!');
+              return;
+            }
+            if (newPasswordInput.length < 4) {
+              setPassError('Kata sandi baru harus minimal 4 karakter!');
+              return;
+            }
+            if (newPasswordInput !== confirmPasswordInput) {
+              setPassError('Konfirmasi kata sandi baru tidak cocok!');
+              return;
+            }
+
+            onUpdatePassword(newPasswordInput);
+            setPassSuccess('Kata sandi admin berhasil diperbarui!');
+            setOldPasswordInput('');
+            setNewPasswordInput('');
+            setConfirmPasswordInput('');
+          }} className="space-y-4">
+            
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-sans">Kata Sandi Saat Ini</label>
+              <input
+                type="password"
+                placeholder="Masukkan kata sandi saat ini..."
+                value={oldPasswordInput}
+                onChange={e => setOldPasswordInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-slate-700 font-mono"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block col-span-2 font-sans">Kata Sandi Baru</label>
+              <input
+                type="password"
+                placeholder="Masukkan kata sandi baru (min. 4 karakter)..."
+                value={newPasswordInput}
+                onChange={e => setNewPasswordInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-slate-700 font-mono"
+                required
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block font-sans">Konfirmasi Kata Sandi Baru</label>
+              <input
+                type="password"
+                placeholder="Ulangi kata sandi baru..."
+                value={confirmPasswordInput}
+                onChange={e => setConfirmPasswordInput(e.target.value)}
+                className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-slate-700 font-mono"
+                required
+              />
+            </div>
+
+            {passError && (
+              <div className="bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 p-3 rounded-lg flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                <span>{passError}</span>
+              </div>
+            )}
+
+            {passSuccess && (
+              <div className="bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 p-3 rounded-lg flex items-center gap-2 font-sans">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+                <span>{passSuccess}</span>
+              </div>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-bold rounded-lg transition-all shadow-md shadow-emerald-500/5 hover:scale-[1.01] active:scale-95"
+            >
+              Simpan Sandi Baru
+            </button>
+          </form>
         </div>
       )}
 

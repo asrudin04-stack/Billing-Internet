@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Wifi, 
   Settings, 
@@ -13,7 +13,14 @@ import {
   ChevronRight, 
   Layers, 
   TrendingUp,
-  Globe
+  Globe,
+  Lock,
+  Key,
+  ShieldAlert,
+  Eye,
+  EyeOff,
+  LogOut,
+  CheckCircle2
 } from 'lucide-react';
 import { Customer, Invoice, Ticket, SpeedPlan, CustomerStatus } from './types';
 import { 
@@ -35,6 +42,18 @@ export default function App() {
   // Navigation states
   const [currentView, setCurrentView] = useState<'client' | 'admin'>('client');
   const [activeCustomerId, setActiveCustomerId] = useState<string>('cust-lestari'); // default to Lestari to show unpaid invoice flow first
+
+  // Security authentication states
+  const [adminAuthenticated, setAdminAuthenticated] = useState<boolean>(() => {
+    return sessionStorage.getItem('anet_admin_authenticated') === 'true';
+  });
+  const [adminPassword, setAdminPassword] = useState<string>(() => {
+    return localStorage.getItem('anet_admin_password') || 'admin';
+  });
+  const [typedPassword, setTypedPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState<boolean>(false);
 
   // Initial load effect
   useEffect(() => {
@@ -297,6 +316,39 @@ export default function App() {
     handlePayInvoice(invoiceId, 'Persetujuan Manual Admin');
   };
 
+  // ADMIN ACTION: Update Admin Login Password
+  const handleUpdatePassword = (newPass: string) => {
+    localStorage.setItem('anet_admin_password', newPass);
+    setAdminPassword(newPass);
+  };
+
+  // ADMIN ACTION: Logout / Lock session
+  const handleLogout = () => {
+    sessionStorage.removeItem('anet_admin_authenticated');
+    setAdminAuthenticated(false);
+    setTypedPassword('');
+    setLoginError(null);
+    setLoginSuccess(false);
+  };
+
+  // Login handler
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const storedPass = localStorage.getItem('anet_admin_password') || 'admin';
+    if (typedPassword === storedPass) {
+      sessionStorage.setItem('anet_admin_authenticated', 'true');
+      setLoginError(null);
+      setLoginSuccess(true);
+      setTimeout(() => {
+        setAdminAuthenticated(true);
+        setLoginSuccess(false);
+      }, 700);
+    } else {
+      setLoginError('Kata sandi administrator salah! Mohon coba kembali.');
+      setLoginSuccess(false);
+    }
+  };
+
   // Reset Storage back to default to test fresh sandbox
   const handleResetSandbox = () => {
     if (confirm('Atur ulang kembali semua database dan transaksi ANet ke pengaturan awal?')) {
@@ -367,6 +419,16 @@ export default function App() {
 
             {/* RESET BUTTON */}
             <div className="hidden md:flex items-center gap-3">
+              {currentView === 'admin' && adminAuthenticated && (
+                <button
+                  onClick={handleLogout}
+                  className="text-[10px] bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 hover:text-rose-300 font-bold px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5"
+                  title="Lock Sesi Admin"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Kunci Sesi
+                </button>
+              )}
               <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800">
                 <Globe className="w-3 h-3 text-emerald-400" />
                 SERVER OK
@@ -432,6 +494,77 @@ export default function App() {
               Profil pelanggan terpilih tidak ditemukan. Atur ulang database Anda.
             </div>
           )
+        ) : !adminAuthenticated ? (
+          <div className="py-12 flex items-center justify-center">
+            <form onSubmit={handleLoginSubmit} className="max-w-md w-full mx-auto bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  {loginSuccess ? (
+                    <CheckCircle2 className="w-6 h-6 stroke-[2]" />
+                  ) : (
+                    <Lock className="w-6 h-6 stroke-[2]" />
+                  )}
+                </div>
+                <h2 className="text-lg font-extrabold tracking-tight text-slate-100">Otentikasi Administrator</h2>
+                <p className="text-xs text-slate-400">Masukkan kata sandi untuk mengakses halaman manajemen gateway & invoice ANet.</p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest block col-span-2">Kata Sandi</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={typedPassword}
+                      onChange={(e) => setTypedPassword(e.target.value)}
+                      placeholder="Masukkan kata sandi admin..."
+                      className="w-full bg-slate-950 border border-slate-800 focus:border-slate-700 rounded-xl p-3 pr-10 text-xs text-slate-200 focus:outline-none transition-all placeholder-slate-600 font-mono tracking-widest"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                {loginError && (
+                  <div className="bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400 py-2.5 px-3 rounded-lg flex items-start gap-2 leading-relaxed">
+                    <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>{loginError}</span>
+                  </div>
+                )}
+
+                {loginSuccess && (
+                  <div className="bg-emerald-500/10 border border-emerald-500/20 text-xs text-emerald-400 py-2.5 px-3 rounded-lg flex items-start gap-2 leading-relaxed">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                    <span>Sandi dikonfirmasi! Sedang mempersiapkan panel admin...</span>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loginSuccess}
+                  className={`w-full py-3 rounded-xl text-xs font-black tracking-widest uppercase transition-all duration-300 ${
+                    loginSuccess 
+                      ? 'bg-emerald-500 text-slate-950 scale-[0.98]' 
+                      : 'bg-emerald-400 hover:bg-emerald-300 text-slate-950 shadow-lg shadow-emerald-500/10 hover:shadow-emerald-500/20 active:scale-[0.98]'
+                  }`}
+                >
+                  {loginSuccess ? 'Memuat...' : 'Masuk Ke Panel'}
+                </button>
+              </div>
+
+              <div className="text-center pt-2 border-t border-slate-800/60">
+                <p className="text-[10px] text-slate-500 font-mono">
+                  Sandi Default: <span className="bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800 text-emerald-400">admin</span>
+                </p>
+              </div>
+            </form>
+          </div>
         ) : (
           <AdminPanel 
             customers={customers} 
@@ -447,6 +580,8 @@ export default function App() {
             onApproveInvoiceManual={handleApproveInvoiceManual}
             onSendTicketReply={handleSendTicketReply}
             onUpdateTicketStatus={handleUpdateTicketStatus}
+            onUpdatePassword={handleUpdatePassword}
+            currentPasswordValue={adminPassword}
           />
         )}
 
