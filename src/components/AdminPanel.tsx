@@ -81,6 +81,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   // Search inputs
   const [customerSearch, setCustomerSearch] = useState('');
   const [invoiceSearch, setInvoiceSearch] = useState('');
+  const [selectedPeriodFilter, setSelectedPeriodFilter] = useState<string>('all');
 
   // Register form state
   const [showAddCustForm, setShowAddCustForm] = useState(false);
@@ -130,6 +131,29 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
   const pendingInvoiceCount = invoices.filter(i => i.status !== 'paid').length;
   const openTicketCount = tickets.filter(t => t.status !== 'resolved').length;
+
+  // Get available list of unique periods
+  const uniquePeriods = Array.from(new Set(invoices.map(i => i.period))).sort();
+
+  // Filter invoices for chart based on selected period
+  const chartInvoices = selectedPeriodFilter === 'all'
+    ? invoices
+    : invoices.filter(i => i.period === selectedPeriodFilter);
+
+  const paidChartInvoices = chartInvoices.filter(i => i.status === 'paid');
+  const unpaidChartInvoices = chartInvoices.filter(i => i.status === 'unpaid' || i.status === 'overdue');
+
+  const totalPaidSum = paidChartInvoices.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalUnpaidSum = unpaidChartInvoices.reduce((acc, curr) => acc + curr.amount, 0);
+  const totalCombineSum = totalPaidSum + totalUnpaidSum;
+
+  const countPaid = paidChartInvoices.length;
+  const countUnpaid = unpaidChartInvoices.length;
+  const countTotal = countPaid + countUnpaid;
+
+  const recoveryEfficiency = totalCombineSum > 0 
+    ? Math.round((totalPaidSum / totalCombineSum) * 100) 
+    : 0;
 
   // Filtered queries
   const filteredCustomers = customers.filter(c => 
@@ -474,6 +498,165 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           </div>
         </div>
 
+      </div>
+
+      {/* SEKSI REKAP PEMBAYARAN & CHART (PAID VS UNPAID) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div>
+            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+              <span className="w-1.5 h-3.5 bg-emerald-400 rounded-sm inline-block"></span>
+              REKAP & VISUALISASI STATUS PEMBAYARAN
+            </h3>
+            <p className="text-xs text-slate-400 mt-1">
+              Pantau total penerimaan lunas (Paid) dan piutang tagihan tertunda (Unpaid/Overdue) secara dinamis.
+            </p>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-bold">Filter Periode:</span>
+            <select
+              value={selectedPeriodFilter}
+              onChange={e => setSelectedPeriodFilter(e.target.value)}
+              className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 px-3 text-xs text-slate-300 focus:outline-none focus:border-slate-700 font-sans cursor-pointer"
+            >
+              <option value="all">Semua Periode ({invoices.length} Invoice)</option>
+              {uniquePeriods.map(p => (
+                <option key={p} value={p}>{p} ({invoices.filter(i => i.period === p).length} Invoice)</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+          
+          {/* SISI KIRI: SVG DONUT CHART */}
+          <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-slate-950/40 rounded-xl border border-slate-800/40 min-h-[190px]">
+            <div className="relative w-32 h-32">
+              {/* SVG Ring Donut */}
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                {/* Track Circle (Red/Rose-950, representing unpaid/remaining progress) */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="stroke-rose-950 fill-transparent"
+                  strokeWidth="10"
+                />
+                {/* Progress Circle (Emerald-400, representing paid amount) */}
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  className="stroke-emerald-400 fill-transparent transition-all duration-1000 ease-out"
+                  strokeWidth="10"
+                  strokeDasharray="251.3"
+                  strokeDashoffset={251.3 - (recoveryEfficiency / 100) * 251.3}
+                  strokeLinecap="round"
+                />
+              </svg>
+              {/* Centered Percentage Label */}
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-2xl font-black text-slate-100 font-mono tracking-tighter">
+                  {recoveryEfficiency}%
+                </span>
+                <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 font-sans mt-0.5">
+                  Lunas
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-3 text-[10px]">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+                <span className="text-slate-400">Paid ({countPaid})</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                <span className="text-slate-400">Unpaid ({countUnpaid})</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SISI KANAN: DUA BARIS KARTU & LINEAR BAR RATIO */}
+          <div className="md:col-span-8 space-y-4">
+            
+            {/* STACKED HORIZONTAL BAR & LABELS */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[11px] font-sans">
+                <span className="text-slate-400">Distribusi Rasio Nominal</span>
+                <span className="text-emerald-400 font-mono font-bold">
+                  {recoveryEfficiency}% Lunas <span className="text-slate-600">|</span> <span className="text-rose-400">{100 - recoveryEfficiency}% Pending</span>
+                </span>
+              </div>
+              
+              {/* Bar line background container */}
+              <div className="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800 p-0.5">
+                <div 
+                  className="bg-emerald-400 rounded-full h-full transition-all duration-1000 ease-out shadow-sm" 
+                  style={{ width: `${recoveryEfficiency}%` }}
+                />
+                <div 
+                  className="bg-rose-500/80 rounded-full h-full transition-all duration-1000 ease-out" 
+                  style={{ width: `${100 - recoveryEfficiency}%` }}
+                />
+              </div>
+            </div>
+
+            {/* DETAIL SUMMARY CARDS GRID */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+              
+              {/* KARTU PAID */}
+              <div className="bg-slate-950/30 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-800 transition-colors">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-500 font-bold">Sudah Dibayar (Lunas)</span>
+                  <span className="bg-emerald-500/10 text-emerald-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                    {countPaid} Invoice
+                  </span>
+                </div>
+                <div className="text-lg font-black text-slate-100 font-mono">
+                  {formatIDR(totalPaidSum)}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1 font-sans">Aliran kas masuk yang berhasil diamankan.</p>
+              </div>
+
+              {/* KARTU UNPAID / DELINQUENT */}
+              <div className="bg-slate-950/30 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-800 transition-colors">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-rose-500 font-bold">Tertunggak (Belum Bayar)</span>
+                  <span className="bg-rose-500/10 text-rose-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-rose-500/20">
+                    {countUnpaid} Invoice
+                  </span>
+                </div>
+                <div className="text-lg font-black text-slate-100 font-mono">
+                  {formatIDR(totalUnpaidSum)}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1 font-sans">Target kolektibilitas penagihan gateway.</p>
+              </div>
+
+            </div>
+
+            {/* QUICK STATS FOOTER LINE */}
+            <div className="grid grid-cols-3 gap-2 bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/30 text-center text-[10px] font-sans">
+              <div>
+                <span className="text-slate-500 block">Total Rencana Tagihan</span>
+                <span className="text-slate-300 font-mono font-bold">{formatIDR(totalCombineSum)}</span>
+              </div>
+              <div className="border-x border-slate-800/30">
+                <span className="text-slate-500 block">Indeks Penagihan</span>
+                <span className="text-slate-300 font-mono font-bold">{recoveryEfficiency}% Efisien</span>
+              </div>
+              <div>
+                <span className="text-slate-500 block">Rata-rata Tagihan</span>
+                <span className="text-slate-300 font-mono font-bold">
+                  {formatIDR(countTotal > 0 ? Math.round(totalCombineSum / countTotal) : 0)}
+                </span>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
       </div>
 
       {/* ADMIN SUB-TABS SELECTOR RULER */}
