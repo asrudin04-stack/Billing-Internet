@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { 
   Users, 
   CreditCard, 
@@ -19,7 +19,13 @@ import {
   ArrowUpCircle, 
   MessageSquare,
   Activity,
-  UserCheck
+  UserCheck,
+  Upload,
+  FileSpreadsheet,
+  FileText,
+  Download,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { Customer, Invoice, Ticket, SpeedPlan, CustomerStatus } from '../types';
 
@@ -29,6 +35,7 @@ interface AdminPanelProps {
   invoices: Invoice[];
   tickets: Ticket[];
   onAddCustomer: (customerData: Omit<Customer, 'id' | 'status' | 'currentBalance' | 'ipAddress'>) => void;
+  onImportCustomers: (customersList: Omit<Customer, 'id' | 'status' | 'currentBalance' | 'ipAddress'>[]) => void;
   onUpdateCustomerStatus: (id: string, status: CustomerStatus) => void;
   onUpdateCustomerPlan: (id: string, planId: string) => void;
   onDeleteCustomer: (id: string) => void;
@@ -44,6 +51,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   invoices,
   tickets,
   onAddCustomer,
+  onImportCustomers,
   onUpdateCustomerStatus,
   onUpdateCustomerPlan,
   onDeleteCustomer,
@@ -68,6 +76,16 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [newPlanId, setNewPlanId] = useState(plans[0]?.id || '');
   const [newPPPoE, setNewPPPoE] = useState('');
   const [newDueDate, setNewDueDate] = useState('2026-07-01');
+
+  // Customer Import system states
+  const [showImportForm, setShowImportForm] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importFormat, setImportFormat] = useState<'csv' | 'json'>('csv');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<Omit<Customer, 'id' | 'status' | 'currentBalance' | 'ipAddress'>[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manual invoice form state
   const [showAddInvoiceForm, setShowAddInvoiceForm] = useState(false);
@@ -132,6 +150,225 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     setNewAddress('');
     setNewPPPoE('');
     setShowAddCustForm(false);
+  };
+
+  // --- SYSTEM CUSTOMER BIG-DATA IMPORT HANDLERS ---
+  const processImportText = (text: string, format: 'csv' | 'json') => {
+    if (!text.trim()) {
+      setImportPreview([]);
+      setImportError(null);
+      return;
+    }
+    try {
+      if (format === 'json') {
+        const parsed = JSON.parse(text);
+        const dataArr = Array.isArray(parsed) ? parsed : [parsed];
+        
+        const validated: Omit<Customer, 'id' | 'status' | 'currentBalance' | 'ipAddress'>[] = [];
+        for (let i = 0; i < dataArr.length; i++) {
+          const item = dataArr[i];
+          if (!item.name || !item.email || !item.phone) {
+            throw new Error(`Data pada baris/index ke-${i + 1} tidak lengkap. Kolom 'name', 'email', dan 'phone' wajib ada.`);
+          }
+          validated.push({
+            name: String(item.name).trim(),
+            email: String(item.email).trim(),
+            phone: String(item.phone).trim(),
+            address: String(item.address || '').trim(),
+            activePlanId: String(item.activePlanId || plans[0]?.id || 'plan-lite').trim(),
+            pppoeUsername: String(item.pppoeUsername || `${String(item.name).toLowerCase().replace(/[^a-z0-9]/g, '').split(' ')[0] || 'pppoe'}_user@nusanet`).trim(),
+            dueDate: String(item.dueDate || '2026-07-01').trim()
+          });
+        }
+        setImportPreview(validated);
+        setImportError(null);
+      } else {
+        // CSV Parsing
+        const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+        if (lines.length <= 1) {
+          throw new Error('CSV mendeteksi data kosong atau tidak ada header kolom.');
+        }
+        
+        // Parse headers: support multi languages/variants
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        
+        const idxName = headers.findIndex(h => h.includes('name') || h === 'nama' || h.includes('lengkap'));
+        const idxEmail = headers.findIndex(h => h.includes('email') || h === 'surel' || h.includes('mail'));
+        const idxPhone = headers.findIndex(h => h.includes('phone') || h.includes('telp') || h.includes('wa') || h.includes('hp'));
+        const idxAddress = headers.findIndex(h => h.includes('address') || h === 'alamat' || h.includes('lokasi'));
+        const idxPlan = headers.findIndex(h => h.includes('plan') || h === 'paket' || h.includes('speed') || h.includes('package'));
+        const idxPPPoE = headers.findIndex(h => h.includes('pppoe') || h.includes('username') || h.includes('user'));
+        const idxDueDate = headers.findIndex(h => h.includes('due') || h.includes('tempo') || h.includes('tgl') || h.includes('date'));
+
+        if (idxName === -1 || idxEmail === -1 || idxPhone === -1) {
+          throw new Error('Format Header CSV salah. Wajib mencakup minimal kolom: name, email, phone (Bisa dipisahkan dengan koma).');
+        }
+
+        const validated: Omit<Customer, 'id' | 'status' | 'currentBalance' | 'ipAddress'>[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          // Simple split. In case of complex commas, we trim and split
+          const row = lines[i].split(',').map(cell => cell.trim().replace(/^["']|["']$/g, ''));
+          if (row.length === 0 || (row.length === 1 && row[0] === '')) continue;
+
+          const name = row[idxName] || '';
+          const email = row[idxEmail] || '';
+          const phone = row[idxPhone] || '';
+          
+          if (!name || !email || !phone) {
+            throw new Error(`Data baris ke-${i + 1} tidak lengkap. Pastikan kolom nama, email, dan phone terisi.`);
+          }
+
+          const address = idxAddress !== -1 ? row[idxAddress] || '' : '';
+          const activePlanId = idxPlan !== -1 && row[idxPlan] ? row[idxPlan] : plans[0]?.id || 'plan-lite';
+          const pppoeUsername = idxPPPoE !== -1 && row[idxPPPoE] 
+            ? row[idxPPPoE] 
+            : `${name.toLowerCase().replace(/[^a-z0-9]/g, '').split(' ')[0] || 'customer'}_user@nusanet`;
+          const dueDate = idxDueDate !== -1 && row[idxDueDate] ? row[idxDueDate] : '2026-07-01';
+
+          validated.push({
+            name,
+            email,
+            phone,
+            address,
+            activePlanId,
+            pppoeUsername,
+            dueDate
+          });
+        }
+        setImportPreview(validated);
+        setImportError(null);
+      }
+    } catch (err: any) {
+      setImportError(err.message || 'Format tidak valid. Silakan periksa kembali.');
+      setImportPreview([]);
+    }
+  };
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setImportText(val);
+    processImportText(val, importFormat);
+  };
+
+  const handleFormatChange = (format: 'csv' | 'json') => {
+    setImportFormat(format);
+    setImportPreview([]);
+    setImportError(null);
+    // Attempt re-processing with new format if text exists
+    if (importText.trim()) {
+      processImportText(importText, format);
+    }
+  };
+
+  const handleFileRead = (file: File) => {
+    const reader = new FileReader();
+    const isJson = file.name.endsWith('.json') || file.type === 'application/json';
+    const isCsv = file.name.endsWith('.csv') || file.type === 'text/csv';
+    
+    if (!isJson && !isCsv) {
+      setImportError('Tipe file salah! Lampirkan dokumen ber ekstensi .csv atau .json saja.');
+      return;
+    }
+    
+    const format = isJson ? 'json' : 'csv';
+    setImportFormat(format);
+
+    reader.onload = (e) => {
+      const text = e.target?.result as string;
+      if (text) {
+        setImportText(text);
+        processImportText(text, format);
+      }
+    };
+    reader.onerror = () => {
+      setImportError('Gagal membaca fail yang diunggah.');
+    };
+    reader.readAsText(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFileRead(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileRead(e.target.files[0]);
+    }
+  };
+
+  const downloadTemplate = (format: 'csv' | 'json') => {
+    let content = '';
+    let mimeType = 'text/plain';
+    let filename = '';
+
+    if (format === 'csv') {
+      content = 'name,email,phone,address,activePlanId,pppoeUsername,dueDate\n' +
+                'Ahmad Subardjo,subardjo@gmail.com,0812345678,Jl. Merdeka No. 10,plan-lite,subardjo_lite@nusanet,2026-07-01\n' +
+                'Rina Wijaya,rina@yahoo.com,0856112233,Perum Indah Blok C/3,plan-home,rina_home@nusanet,2026-07-05\n' +
+                'Kusnadi Bakri,kusnadi@outlook.com,0811928374,Kavling Elit Blok A4 No 12,plan-pro,kusnadi_pro@nusanet,2026-07-10';
+      mimeType = 'text/csv;charset=utf-8;';
+      filename = 'template_import_nusanet.csv';
+    } else {
+      const sampleJSON = [
+        {
+          name: "Ahmad Subardjo",
+          email: "subardjo@gmail.com",
+          phone: "0812345678",
+          address: "Jl. Merdeka No. 10",
+          activePlanId: "plan-lite",
+          pppoeUsername: "subardjo_lite@nusanet",
+          dueDate: "2026-07-01"
+        },
+        {
+          name: "Rina Wijaya",
+          email: "rina@yahoo.com",
+          phone: "0856112233",
+          address: "Perum Indah Blok C/3",
+          activePlanId: "plan-home",
+          pppoeUsername: "rina_home@nusanet",
+          dueDate: "2026-07-05"
+        }
+      ];
+      content = JSON.stringify(sampleJSON, null, 2);
+      mimeType = 'application/json;charset=utf-8;';
+      filename = 'template_import_nusanet.json';
+    }
+
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', filename);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCommitImport = () => {
+    if (importPreview.length === 0) return;
+    onImportCustomers(importPreview);
+    setImportSuccess(`Sukses meluncurkan import! ${importPreview.length} pelanggan baru kini telah aktif di system.`);
+    setImportText('');
+    setImportPreview([]);
+    setImportError(null);
+    setTimeout(() => {
+      setImportSuccess(null);
+      setShowImportForm(false);
+    }, 4500);
   };
 
   const handleManualInvoiceSubmit = (e: React.FormEvent) => {
@@ -291,15 +528,239 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               />
             </div>
 
-            {/* Trigger register plan */}
-            <button
-              onClick={() => setShowAddCustForm(!showAddCustForm)}
-              className="px-4 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-bold rounded-lg shadow transition-all flex items-center gap-1.5"
-            >
-              <Plus className="w-4 h-4" />
-              Tambah Pelanggan Baru
-            </button>
+            {/* Actions Panel Buttons */}
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              {/* Trigger Import */}
+              <button
+                onClick={() => {
+                  setShowImportForm(!showImportForm);
+                  setShowAddCustForm(false);
+                }}
+                className={`px-4 py-2 text-xs font-bold rounded-lg shadow transition-all flex items-center gap-1.5 ${
+                  showImportForm 
+                    ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30' 
+                    : 'bg-slate-900 text-slate-300 border border-slate-800 hover:border-slate-700 hover:text-white'
+                }`}
+              >
+                <Upload className="w-4 h-4" />
+                Import Pelanggan (CSV/JSON)
+              </button>
+
+              {/* Trigger register plan */}
+              <button
+                onClick={() => {
+                  setShowAddCustForm(!showAddCustForm);
+                  setShowImportForm(false);
+                }}
+                className="px-4 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 text-xs font-bold rounded-lg shadow transition-all flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                Tambah Pelanggan Baru
+              </button>
+            </div>
           </div>
+
+          {/* Form Import Pelanggan */}
+          {showImportForm && (
+            <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-4 max-w-4xl animate-fade-in relative shadow-lg">
+              <button 
+                type="button" 
+                onClick={() => setShowImportForm(false)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-200 text-xs font-semibold"
+              >
+                Batal [x]
+              </button>
+              <div>
+                <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                  Sistem Import Data Pelanggan (Massal)
+                </h4>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Migrasi data base pelanggan NusaNet dari file CSV Microsoft Excel atau file JSON secara instan dan aman.
+                </p>
+              </div>
+
+              {/* Format Guide Alert & Downloader */}
+              <div className="bg-slate-950 border border-slate-800 p-3 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-bold text-slate-300 flex items-center gap-1">
+                    <Download className="w-3.5 h-3.5 text-emerald-400" />
+                    Panduan & Unduh Template Contoh:
+                  </p>
+                  <p className="text-[10px] text-slate-400 leading-relaxed max-w-2xl">
+                    Struktur kolom wajib: <code className="text-emerald-400 font-mono">name, email, phone</code>. Kolom opsional: <code className="text-slate-300 font-mono">address, activePlanId, pppoeUsername, dueDate</code>. Default rencana paket adalah <em className="text-amber-400">plan-lite</em> jika dikosongkan.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => downloadTemplate('csv')}
+                    className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[10px] font-bold text-slate-300 transition-colors flex items-center gap-1.5"
+                  >
+                    <FileSpreadsheet className="w-3 h-3 text-emerald-400" />
+                    Unduh CSV
+                  </button>
+                  <button
+                    onClick={() => downloadTemplate('json')}
+                    className="px-2.5 py-1.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[10px] font-bold text-slate-300 transition-colors flex items-center gap-1.5"
+                  >
+                    <FileText className="w-3 h-3 text-amber-400" />
+                    Unduh JSON
+                  </button>
+                </div>
+              </div>
+
+              {/* Upload controls / textpaste selection pills */}
+              <div className="flex items-center gap-4 border-b border-slate-800/60 pb-3">
+                <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-850">
+                  <button
+                    onClick={() => handleFormatChange('csv')}
+                    className={`px-3 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all ${
+                      importFormat === 'csv'
+                        ? 'bg-emerald-400 text-slate-950 shadow'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Format CSV
+                  </button>
+                  <button
+                    onClick={() => handleFormatChange('json')}
+                    className={`px-3 py-1 text-[10px] sm:text-xs font-bold rounded-md transition-all ${
+                      importFormat === 'json'
+                        ? 'bg-emerald-400 text-slate-950 shadow'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    Format JSON
+                  </button>
+                </div>
+                <span className="text-[10px] text-slate-500 font-mono hidden sm:inline">
+                  | Drag-and-drop didukung penuh!
+                </span>
+              </div>
+
+              {/* DRAG AND DROP ZONE */}
+              <div
+                onDragOver={handleDragOver}
+                onDragLeave={handleDragLeave}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border border-dashed rounded-xl p-6 text-center cursor-pointer transition-all ${
+                  isDragging 
+                    ? 'border-emerald-400 bg-emerald-500/5' 
+                    : 'border-slate-800 bg-slate-950/45 hover:border-slate-700 hover:bg-slate-950'
+                }`}
+              >
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileSelect} 
+                  accept=".csv,.json" 
+                  className="hidden" 
+                />
+                <Upload className="w-6 h-6 text-slate-500 mx-auto mb-2 animate-pulse" />
+                <p className="text-xs font-bold text-slate-300">
+                  Seret & Drop File CSV / JSON di sini, atau <span className="text-emerald-400 underline decoration-dotted">Klik untuk Jelajahi Komputer</span>
+                </p>
+                <p className="text-[10px] text-slate-500 mt-1">Gunakan berkas template (.csv atau .json) yang diunduh di atas.</p>
+              </div>
+
+              {/* OR PASTE TEXTAREA AREA */}
+              <div className="space-y-1.5">
+                <label className="text-[11px] font-bold text-slate-400 block">Atau Salin & Tempel (Paste) Teks Data Di Sini:</label>
+                <textarea
+                  value={importText}
+                  onChange={handleTextChange}
+                  placeholder={
+                    importFormat === 'csv'
+                      ? "name,email,phone,address,activePlanId,pppoeUsername,dueDate\nIndra Lesmana,indra@gmail.com,0814422233,Gg. Damai No. 8,plan-home,indra_lesmana,2026-07-15\nSari Puspa,sari@gmail.com,0855227711,Jl. Raya Barat,plan-lite,sari_puspa,2026-07-20"
+                      : '[\n  {\n    "name": "Indra Lesmana",\n    "email": "indra@gmail.com",\n    "phone": "0814422233",\n    "address": "Gg. Damai No. 8",\n    "activePlanId": "plan-home",\n    "pppoeUsername": "indra_lesmana",\n    "dueDate": "2026-07-15"\n  }\n]'
+                  }
+                  className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl text-[11px] text-slate-300 font-mono focus:outline-none focus:border-slate-700 h-28 resize-y"
+                />
+              </div>
+
+              {/* STATUS ERRORS OR ACTIONS */}
+              {importError && (
+                <div className="bg-rose-500/5 border border-rose-500/10 p-3 rounded-xl flex items-start gap-2.5 animate-fade-in">
+                  <AlertTriangle className="w-4 h-4 text-rose-500 mt-0.5 shrink-0" />
+                  <div>
+                    <h5 className="text-[11px] font-bold text-rose-400">Ada Masalah Validasi Dokumen:</h5>
+                    <p className="text-[10px] text-rose-300 font-mono mt-0.5">{importError}</p>
+                  </div>
+                </div>
+              )}
+
+              {importSuccess && (
+                <div className="bg-emerald-500/10 border border-emerald-500/20 p-3.5 rounded-xl flex items-start gap-2.5 animate-fade-in bg-slate-950">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="text-xs font-bold text-emerald-400">Sinkronisasi Selesai!</h5>
+                    <p className="text-[11px] text-slate-300 mt-0.5">{importSuccess}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* TABLE PREVIEW RECORDSET BEFORE IMPORTING */}
+              {importPreview.length > 0 && (
+                <div className="border border-slate-800/80 rounded-xl bg-slate-950 pointer-events-auto overflow-hidden animate-fade-in space-y-0.5">
+                  <div className="px-3 py-2 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-emerald-400 tracking-wider">
+                      Pratinjau Data Valid ({importPreview.length} Baris Terbaca)
+                    </span>
+                    <span className="text-[9px] font-mono text-slate-500">
+                      Telah Lolos Sensor Validasi
+                    </span>
+                  </div>
+                  <div className="overflow-x-auto max-h-48">
+                    <table className="w-full text-left border-collapse font-sans text-[10px]">
+                      <thead>
+                        <tr className="bg-slate-950 text-slate-400 border-b border-slate-900 uppercase font-mono">
+                          <th className="p-2">Nama</th>
+                          <th className="p-2">Kontak Email / Telp</th>
+                          <th className="p-2">Paket Speed</th>
+                          <th className="p-2">Username PPPoE</th>
+                          <th className="p-2">Alamat</th>
+                          <th className="p-2 text-right">Jatuh Tempo</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900">
+                        {importPreview.map((item, idx) => {
+                          const matchingPlan = plans.find(p => p.id === item.activePlanId);
+                          return (
+                            <tr key={idx} className="hover:bg-slate-900/50 text-slate-300">
+                              <td className="p-2 font-semibold text-slate-200">{item.name}</td>
+                              <td className="p-2">
+                                <div className="text-[10px]">{item.email}</div>
+                                <div className="text-[9px] text-slate-500 italic font-mono">{item.phone}</div>
+                              </td>
+                              <td className="p-2">
+                                <span className="bg-slate-850 px-1.5 py-0.5 rounded text-[9px] font-bold text-slate-400 border border-slate-800">
+                                  {matchingPlan ? matchingPlan.name : item.activePlanId}
+                                </span>
+                              </td>
+                              <td className="p-2 font-mono text-emerald-400 text-[9px]">{item.pppoeUsername}</td>
+                              <td className="p-2 max-w-[120px] truncate" title={item.address}>{item.address || '-'}</td>
+                              <td className="p-2 text-right font-mono text-amber-500">{item.dueDate}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="p-2.5 bg-slate-900 border-t border-slate-800 flex justify-end">
+                    <button
+                      onClick={handleCommitImport}
+                      className="px-4 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 hover:scale-[1.02] active:scale-[0.98] transition-all text-xs font-black rounded-lg shadow-lg flex items-center gap-1.5"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      Konfirmasi Import ({importPreview.length} Pelanggan Baru)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Form Create Customer */}
           {showAddCustForm && (

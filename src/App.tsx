@@ -205,6 +205,27 @@ export default function App() {
     saveState('nusanet_customers', updatedCusts);
   };
 
+  // ADMIN ACTION: Import Customers (Bulk)
+  const handleImportCustomers = (customersList: Omit<Customer, 'id' | 'status' | 'currentBalance' | 'ipAddress'>[]) => {
+    const newCustomers: Customer[] = customersList.map((custData, index) => {
+      const nameParts = custData.name.toLowerCase().replace(/[^a-zA-Z0-9 ]/g, '').split(' ');
+      const prefix = nameParts[0] || 'imported';
+      const newId = `cust-${prefix}-${Math.floor(100 + Math.random() * 899) + 100}-${index}`;
+      const randomIP = `10.20.103.${Math.floor(10 + Math.random() * 240)}`;
+      return {
+        ...custData,
+        id: newId,
+        status: 'active',
+        currentBalance: 0,
+        ipAddress: randomIP
+      };
+    });
+
+    const updatedCusts = [...customers, ...newCustomers];
+    setCustomers(updatedCusts);
+    saveState('nusanet_customers', updatedCusts);
+  };
+
   // ADMIN ACTION: Change Customer Status (e.g. suspend / unsupend)
   const handleUpdateCustomerStatus = (id: string, status: CustomerStatus) => {
     const updatedCusts = customers.map(c => {
@@ -418,6 +439,7 @@ export default function App() {
             invoices={invoices} 
             tickets={tickets} 
             onAddCustomer={handleAddCustomer}
+            onImportCustomers={handleImportCustomers}
             onUpdateCustomerStatus={handleUpdateCustomerStatus}
             onUpdateCustomerPlan={handleUpdateCustomerPlan}
             onDeleteCustomer={handleDeleteCustomer}
