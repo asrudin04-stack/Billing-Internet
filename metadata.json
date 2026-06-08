@@ -1,5 +1,5 @@
 {
-  "name": "NusaNet ISP Billing",
+  "name": "ANet ISP Billing",
   "description": "Sistem informasi billing dan pembayaran internet modern untuk ISP dengan portal pelanggan interaktif dan panel admin lengkap.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

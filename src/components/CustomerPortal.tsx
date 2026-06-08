@@ -126,7 +126,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
           <div className="text-sm">
             <h4 className="font-bold">Layanan Internet Ditangguhkan (Suspended)</h4>
             <p className="text-xs text-red-300 mt-1">
-              Sistem mendeteksi masa aktif paket Anda telah habis dan tagihan jatuh tempo belum diselesaikan. Harap melunasi tagihan aktif di bawah ini untuk mengaktifkan kembali koneksi NusaNet Anda secara instan.
+              Sistem mendeteksi masa aktif paket Anda telah habis dan tagihan jatuh tempo belum diselesaikan. Harap melunasi tagihan aktif di bawah ini untuk mengaktifkan kembali koneksi ANet Anda secara instan.
             </p>
           </div>
         </div>
@@ -453,7 +453,7 @@ export const CustomerPortal: React.FC<CustomerPortalProps> = ({
                         </form>
                       ) : (
                         <div className="text-center text-[11px] text-slate-500 py-1 border-t border-slate-800 mt-2">
-                          🔒 Tiket ini telah ditutup oleh NusaNet Support.
+                          🔒 Tiket ini telah ditutup oleh ANet Support.
                         </div>
                       )}
                     </div>

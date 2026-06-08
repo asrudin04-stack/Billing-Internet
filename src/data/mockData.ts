@@ -3,7 +3,7 @@ import { SpeedPlan, Customer, Invoice, Ticket } from '../types';
 export const INITIAL_PLANS: SpeedPlan[] = [
   {
     id: 'plan-lite',
-    name: 'NusaNet Lite Fiber',
+    name: 'ANet Lite Fiber',
     speedMbps: 20,
     price: 220000,
     type: 'Fiber',
@@ -12,7 +12,7 @@ export const INITIAL_PLANS: SpeedPlan[] = [
   },
   {
     id: 'plan-home',
-    name: 'NusaNet Home Premium',
+    name: 'ANet Home Premium',
     speedMbps: 50,
     price: 360000,
     type: 'Fiber',
@@ -21,7 +21,7 @@ export const INITIAL_PLANS: SpeedPlan[] = [
   },
   {
     id: 'plan-pro',
-    name: 'NusaNet Pro Symmetric',
+    name: 'ANet Pro Symmetric',
     speedMbps: 100,
     price: 580000,
     type: 'Fiber',
@@ -30,7 +30,7 @@ export const INITIAL_PLANS: SpeedPlan[] = [
   },
   {
     id: 'plan-ultra',
-    name: 'NusaNet Corporate Star',
+    name: 'ANet Corporate Star',
     speedMbps: 250,
     price: 1350000,
     type: 'Fiber',
@@ -48,7 +48,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Jl. Kemang Raya No. 42, Jakarta Selatan',
     status: 'active',
     activePlanId: 'plan-home',
-    pppoeUsername: 'budi_home@nusanet',
+    pppoeUsername: 'budi_home@anet',
     ipAddress: '10.20.104.51',
     currentBalance: 0,
     dueDate: '2026-06-15'
@@ -61,7 +61,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Perum Gading Serpong Blok A5/12, Tangerang',
     status: 'active',
     activePlanId: 'plan-pro',
-    pppoeUsername: 'lestari_pro@nusanet',
+    pppoeUsername: 'lestari_pro@anet',
     ipAddress: '10.20.104.98',
     currentBalance: 580000, // Unpaid balance
     dueDate: '2026-06-10'
@@ -74,7 +74,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Sleman Indah Residence No. 8, Sleman, Yogyakarta',
     status: 'suspended', // Suspended customer to show state
     activePlanId: 'plan-lite',
-    pppoeUsername: 'joko_lite@nusanet',
+    pppoeUsername: 'joko_lite@anet',
     ipAddress: '10.20.101.12',
     currentBalance: 220000,
     dueDate: '2026-06-05' // Overdue
@@ -87,7 +87,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Jl. Dharmahusada Indah No. 15, Surabaya',
     status: 'active',
     activePlanId: 'plan-lite',
-    pppoeUsername: 'clara_lite@nusanet',
+    pppoeUsername: 'clara_lite@anet',
     ipAddress: '10.20.102.44',
     currentBalance: 0,
     dueDate: '2026-06-25'
@@ -100,7 +100,7 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Kawasan Industri Cikarang Blok C6, Bekasi',
     status: 'active',
     activePlanId: 'plan-ultra',
-    pppoeUsername: 'sinar_corp@nusanet',
+    pppoeUsername: 'sinar_corp@anet',
     ipAddress: '182.253.12.185',
     currentBalance: 0,
     dueDate: '2026-06-20'
@@ -113,7 +113,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202605-001',
     customerId: 'cust-budi',
     customerName: 'Ahmad Budi Santoso',
-    planName: 'NusaNet Home Premium',
+    planName: 'ANet Home Premium',
     amount: 360000,
     period: 'Mei 2026',
     status: 'paid',
@@ -125,7 +125,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202606-001',
     customerId: 'cust-budi',
     customerName: 'Ahmad Budi Santoso',
-    planName: 'NusaNet Home Premium',
+    planName: 'ANet Home Premium',
     amount: 360000,
     period: 'Juni 2026',
     status: 'paid',
@@ -138,7 +138,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202605-002',
     customerId: 'cust-lestari',
     customerName: 'Lestari Handayani',
-    planName: 'NusaNet Pro Symmetric',
+    planName: 'ANet Pro Symmetric',
     amount: 580000,
     period: 'Mei 2026',
     status: 'paid',
@@ -150,7 +150,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202606-002',
     customerId: 'cust-lestari',
     customerName: 'Lestari Handayani',
-    planName: 'NusaNet Pro Symmetric',
+    planName: 'ANet Pro Symmetric',
     amount: 580000,
     period: 'Juni 2026',
     status: 'unpaid',
@@ -161,7 +161,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202605-003',
     customerId: 'cust-joko',
     customerName: 'Joko Raharjo',
-    planName: 'NusaNet Lite Fiber',
+    planName: 'ANet Lite Fiber',
     amount: 220000,
     period: 'Mei 2026',
     status: 'paid',
@@ -173,7 +173,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202606-003',
     customerId: 'cust-joko',
     customerName: 'Joko Raharjo',
-    planName: 'NusaNet Lite Fiber',
+    planName: 'ANet Lite Fiber',
     amount: 220000,
     period: 'Juni 2026',
     status: 'overdue',
@@ -184,7 +184,7 @@ export const INITIAL_INVOICES: Invoice[] = [
     id: 'INV-202605-004',
     customerId: 'cust-sinar',
     customerName: 'PT Sinar Abadi Raya',
-    planName: 'NusaNet Corporate Star',
+    planName: 'ANet Corporate Star',
     amount: 1350000,
     period: 'Mei 2026',
     status: 'paid',
@@ -228,13 +228,13 @@ export const INITIAL_TICKETS: Ticket[] = [
         id: 'msg-1',
         sender: 'client',
         senderName: 'Lestari Handayani',
-        message: 'Selamat sore tim NusaNet. Speedtest saya sore ini jam 18:00 hanya dapat sekitar 12 Mbps, seharusnya paket Pro saya 100 Mbps. Mohon dicek apakah ada pemeliharaan jaringan.',
+        message: 'Selamat sore tim ANet. Speedtest saya sore ini jam 18:00 hanya dapat sekitar 12 Mbps, seharusnya paket Pro saya 100 Mbps. Mohon dicek apakah ada pemeliharaan jaringan.',
         timestamp: '2026-06-06 18:10'
       },
       {
         id: 'msg-2',
         sender: 'admin',
-        senderName: 'NusaNet Admin Support',
+        senderName: 'ANet Admin Support',
         message: 'Selamat sore Ibu Lestari. Mohon maaf atas ketidaknyamanannya. Kami melihat ada sirkulasi link redaman optik agak kurang stabil di area Gading Serpong. Teknisi kami sedang menelusuri gardu ODP terdekat. Kami informasikan perkembangannya.',
         timestamp: '2026-06-06 19:00'
       }

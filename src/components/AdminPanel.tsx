@@ -176,7 +176,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             phone: String(item.phone).trim(),
             address: String(item.address || '').trim(),
             activePlanId: String(item.activePlanId || plans[0]?.id || 'plan-lite').trim(),
-            pppoeUsername: String(item.pppoeUsername || `${String(item.name).toLowerCase().replace(/[^a-z0-9]/g, '').split(' ')[0] || 'pppoe'}_user@nusanet`).trim(),
+            pppoeUsername: String(item.pppoeUsername || `${String(item.name).toLowerCase().replace(/[^a-z0-9]/g, '').split(' ')[0] || 'pppoe'}_user@anet`).trim(),
             dueDate: String(item.dueDate || '2026-07-01').trim()
           });
         }
@@ -222,7 +222,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           const activePlanId = idxPlan !== -1 && row[idxPlan] ? row[idxPlan] : plans[0]?.id || 'plan-lite';
           const pppoeUsername = idxPPPoE !== -1 && row[idxPPPoE] 
             ? row[idxPPPoE] 
-            : `${name.toLowerCase().replace(/[^a-z0-9]/g, '').split(' ')[0] || 'customer'}_user@nusanet`;
+            : `${name.toLowerCase().replace(/[^a-z0-9]/g, '').split(' ')[0] || 'customer'}_user@anet`;
           const dueDate = idxDueDate !== -1 && row[idxDueDate] ? row[idxDueDate] : '2026-07-01';
 
           validated.push({
@@ -317,11 +317,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
 
     if (format === 'csv') {
       content = 'name,email,phone,address,activePlanId,pppoeUsername,dueDate\n' +
-                'Ahmad Subardjo,subardjo@gmail.com,0812345678,Jl. Merdeka No. 10,plan-lite,subardjo_lite@nusanet,2026-07-01\n' +
-                'Rina Wijaya,rina@yahoo.com,0856112233,Perum Indah Blok C/3,plan-home,rina_home@nusanet,2026-07-05\n' +
-                'Kusnadi Bakri,kusnadi@outlook.com,0811928374,Kavling Elit Blok A4 No 12,plan-pro,kusnadi_pro@nusanet,2026-07-10';
+                'Ahmad Subardjo,subardjo@gmail.com,0812345678,Jl. Merdeka No. 10,plan-lite,subardjo_lite@anet,2026-07-01\n' +
+                'Rina Wijaya,rina@yahoo.com,0856112233,Perum Indah Blok C/3,plan-home,rina_home@anet,2026-07-05\n' +
+                'Kusnadi Bakri,kusnadi@outlook.com,0811928374,Kavling Elit Blok A4 No 12,plan-pro,kusnadi_pro@anet,2026-07-10';
       mimeType = 'text/csv;charset=utf-8;';
-      filename = 'template_import_nusanet.csv';
+      filename = 'template_import_anet.csv';
     } else {
       const sampleJSON = [
         {
@@ -330,7 +330,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           phone: "0812345678",
           address: "Jl. Merdeka No. 10",
           activePlanId: "plan-lite",
-          pppoeUsername: "subardjo_lite@nusanet",
+          pppoeUsername: "subardjo_lite@anet",
           dueDate: "2026-07-01"
         },
         {
@@ -339,13 +339,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           phone: "0856112233",
           address: "Perum Indah Blok C/3",
           activePlanId: "plan-home",
-          pppoeUsername: "rina_home@nusanet",
+          pppoeUsername: "rina_home@anet",
           dueDate: "2026-07-05"
         }
       ];
       content = JSON.stringify(sampleJSON, null, 2);
       mimeType = 'application/json;charset=utf-8;';
-      filename = 'template_import_nusanet.json';
+      filename = 'template_import_anet.json';
     }
 
     const blob = new Blob([content], { type: mimeType });
@@ -380,7 +380,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
     onNewInvoice({
       customerId: invCustomerId,
       customerName: currentCust.name,
-      planName: plans.find(p => p.id === currentCust.activePlanId)?.name || 'NusaNet Speed Plan',
+      planName: plans.find(p => p.id === currentCust.activePlanId)?.name || 'ANet Speed Plan',
       amount: Number(invAmount),
       period: invPeriod
     });
@@ -576,7 +576,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   Sistem Import Data Pelanggan (Massal)
                 </h4>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Migrasi data base pelanggan NusaNet dari file CSV Microsoft Excel atau file JSON secara instan dan aman.
+                  Migrasi data base pelanggan ANet dari file CSV Microsoft Excel atau file JSON secara instan dan aman.
                 </p>
               </div>
 
@@ -815,7 +815,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <label className="text-[11px] font-bold text-slate-400 block mb-1">Username PPPoE (Secret)</label>
                   <input
                     type="text"
-                    placeholder="Contoh: subardjo_lite@nusanet"
+                    placeholder="Contoh: subardjo_lite@anet"
                     value={newPPPoE}
                     onChange={e => setNewPPPoE(e.target.value)}
                     className="w-full bg-slate-950 border border-slate-800 p-2 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-slate-700"
@@ -1024,7 +1024,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               </button>
               <div>
                 <h4 className="text-sm font-bold text-slate-200 uppercase tracking-wider">Terbitkan Invoice Pembayaran Internet</h4>
-                <p className="text-xs text-slate-400 mt-0.5 font-sans">Gunakan form ini untuk membuat invoice tertunda di sistem billing NusaNet.</p>
+                <p className="text-xs text-slate-400 mt-0.5 font-sans">Gunakan form ini untuk membuat invoice tertunda di sistem billing ANet.</p>
               </div>
 
               <div className="space-y-3">

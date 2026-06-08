@@ -204,7 +204,7 @@ export const IndonesiaPaymentModal: React.FC<IndonesiaPaymentModalProps> = ({
 
                   {/* QRIS Container */}
                   <div className="bg-white p-4 rounded-xl shadow-lg border border-slate-200 flex flex-col items-center relative gap-1.5 max-w-[210px] w-full">
-                    <span className="text-[10px] font-bold text-slate-800 border-b border-slate-200 w-full text-center pb-0.5 tracking-wider font-sans">NUSA NET COOP</span>
+                    <span className="text-[10px] font-bold text-slate-800 border-b border-slate-200 w-full text-center pb-0.5 tracking-wider font-sans">ANET COOP</span>
                     
                     {/* Mock QR Representation */}
                     <div className="w-[160px] h-[160px] bg-slate-100 rounded border border-slate-200 flex flex-col items-center justify-center relative p-1.5">
@@ -334,7 +334,7 @@ export const IndonesiaPaymentModal: React.FC<IndonesiaPaymentModalProps> = ({
                   <div className="bg-slate-950/40 p-3.5 rounded-lg border border-slate-800/40 text-xs text-slate-400 space-y-2">
                     <p className="font-semibold text-slate-300">🏪 Tata Cara Pembayaran di Kasir:</p>
                     <p>1. Datangi gerai Alfamart, Indomaret, atau Lawson terdekat.</p>
-                    <p>2. Beritahukan kepada kasir bahwa Anda ingin membayar <strong className="text-slate-200">"Pembayaran NusaNet ISP"</strong> atau <strong className="text-slate-200">"Telkom/Internet Lainnya"</strong>.</p>
+                    <p>2. Beritahukan kepada kasir bahwa Anda ingin membayar <strong className="text-slate-200">"Pembayaran ANet ISP"</strong> atau <strong className="text-slate-200">"Telkom/Internet Lainnya"</strong>.</p>
                     <p>3. Tunjukkan Kode Pembayaran di atas.</p>
                     <p>4. Bayar sesuai nominal kepada kasir. Simpan struk fisik pembayaran sebagai jaminan.</p>
                   </div>
@@ -344,7 +344,7 @@ export const IndonesiaPaymentModal: React.FC<IndonesiaPaymentModalProps> = ({
               <div className="flex gap-2 bg-slate-950/30 p-2.5 rounded-lg border border-slate-800/20 text-[10px] text-slate-500 mt-4 leading-relaxed">
                 <AlertCircle className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  Sistem billing NusaNet berbasis Real-Time Sync. IP internet Anda akan otomatis mendapatkan pembaruan status bandwidth dan auto-unblock sesaat setelah gateway mencatat status pembayaran Anda valid.
+                  Sistem billing ANet berbasis Real-Time Sync. IP internet Anda akan otomatis mendapatkan pembaruan status bandwidth dan auto-unblock sesaat setelah gateway mencatat status pembayaran Anda valid.
                 </span>
               </div>
 

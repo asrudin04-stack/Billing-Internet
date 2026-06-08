@@ -38,33 +38,33 @@ export default function App() {
 
   // Initial load effect
   useEffect(() => {
-    const rawCust = localStorage.getItem('nusanet_customers');
-    const rawPlans = localStorage.getItem('nusanet_plans');
-    const rawInvoices = localStorage.getItem('nusanet_invoices');
-    const rawTickets = localStorage.getItem('nusanet_tickets');
+    const rawCust = localStorage.getItem('anet_customers');
+    const rawPlans = localStorage.getItem('anet_plans');
+    const rawInvoices = localStorage.getItem('anet_invoices');
+    const rawTickets = localStorage.getItem('anet_tickets');
 
     if (rawCust) setCustomers(JSON.parse(rawCust));
     else {
       setCustomers(INITIAL_CUSTOMERS);
-      localStorage.setItem('nusanet_customers', JSON.stringify(INITIAL_CUSTOMERS));
+      localStorage.setItem('anet_customers', JSON.stringify(INITIAL_CUSTOMERS));
     }
 
     if (rawPlans) setPlans(JSON.parse(rawPlans));
     else {
       setPlans(INITIAL_PLANS);
-      localStorage.setItem('nusanet_plans', JSON.stringify(INITIAL_PLANS));
+      localStorage.setItem('anet_plans', JSON.stringify(INITIAL_PLANS));
     }
 
     if (rawInvoices) setInvoices(JSON.parse(rawInvoices));
     else {
       setInvoices(INITIAL_INVOICES);
-      localStorage.setItem('nusanet_invoices', JSON.stringify(INITIAL_INVOICES));
+      localStorage.setItem('anet_invoices', JSON.stringify(INITIAL_INVOICES));
     }
 
     if (rawTickets) setTickets(JSON.parse(rawTickets));
     else {
       setTickets(INITIAL_TICKETS);
-      localStorage.setItem('nusanet_tickets', JSON.stringify(INITIAL_TICKETS));
+      localStorage.setItem('anet_tickets', JSON.stringify(INITIAL_TICKETS));
     }
   }, []);
 
@@ -88,7 +88,7 @@ export default function App() {
     });
 
     setInvoices(updatedInvoices);
-    saveState('nusanet_invoices', updatedInvoices);
+    saveState('anet_invoices', updatedInvoices);
 
     // After updating invoices, find the matching customer and reset their due balance & status if suspended
     const targetInvoice = invoices.find(inv => inv.id === invoiceId);
@@ -106,7 +106,7 @@ export default function App() {
         return cust;
       });
       setCustomers(updatedCustomers);
-      saveState('nusanet_customers', updatedCustomers);
+      saveState('anet_customers', updatedCustomers);
     }
   };
 
@@ -137,7 +137,7 @@ export default function App() {
 
     const updatedTickets = [newTicket, ...tickets];
     setTickets(updatedTickets);
-    saveState('nusanet_tickets', updatedTickets);
+    saveState('anet_tickets', updatedTickets);
   };
 
   // CLIENT & ADMIN CHAT ENGINE ACTION: Send Message
@@ -145,7 +145,7 @@ export default function App() {
     const updatedTickets = tickets.map(ticket => {
       if (ticket.id === ticketId) {
         const actingCustomer = customers.find(c => c.id === ticket.customerId);
-        const nameOfSender = sender === 'client' ? (actingCustomer?.name || 'Customer') : 'NusaNet Admin Support';
+        const nameOfSender = sender === 'client' ? (actingCustomer?.name || 'Customer') : 'ANet Admin Support';
         
         return {
           ...ticket,
@@ -167,7 +167,7 @@ export default function App() {
     });
 
     setTickets(updatedTickets);
-    saveState('nusanet_tickets', updatedTickets);
+    saveState('anet_tickets', updatedTickets);
   };
 
   // ADMIN ACTION: Send Ticket Reply Wrapper
@@ -184,7 +184,7 @@ export default function App() {
       return t;
     });
     setTickets(updatedTickets);
-    saveState('nusanet_tickets', updatedTickets);
+    saveState('anet_tickets', updatedTickets);
   };
 
   // ADMIN ACTION: Add New Customer
@@ -202,7 +202,7 @@ export default function App() {
 
     const updatedCusts = [...customers, newCustomer];
     setCustomers(updatedCusts);
-    saveState('nusanet_customers', updatedCusts);
+    saveState('anet_customers', updatedCusts);
   };
 
   // ADMIN ACTION: Import Customers (Bulk)
@@ -223,7 +223,7 @@ export default function App() {
 
     const updatedCusts = [...customers, ...newCustomers];
     setCustomers(updatedCusts);
-    saveState('nusanet_customers', updatedCusts);
+    saveState('anet_customers', updatedCusts);
   };
 
   // ADMIN ACTION: Change Customer Status (e.g. suspend / unsupend)
@@ -235,7 +235,7 @@ export default function App() {
       return c;
     });
     setCustomers(updatedCusts);
-    saveState('nusanet_customers', updatedCusts);
+    saveState('anet_customers', updatedCusts);
   };
 
   // ADMIN ACTION: Update Customer Speed Plan Package
@@ -247,23 +247,23 @@ export default function App() {
       return c;
     });
     setCustomers(updatedCusts);
-    saveState('nusanet_customers', updatedCusts);
+    saveState('anet_customers', updatedCusts);
   };
 
   // ADMIN ACTION: Delete Customer
   const handleDeleteCustomer = (id: string) => {
     const updatedCusts = customers.filter(c => c.id !== id);
     setCustomers(updatedCusts);
-    saveState('nusanet_customers', updatedCusts);
+    saveState('anet_customers', updatedCusts);
 
     // Purge their corresponding invoices & tickets
     const updatedInvoices = invoices.filter(i => i.customerId !== id);
     setInvoices(updatedInvoices);
-    saveState('nusanet_invoices', updatedInvoices);
+    saveState('anet_invoices', updatedInvoices);
 
     const updatedTickets = tickets.filter(t => t.customerId !== id);
     setTickets(updatedTickets);
-    saveState('nusanet_tickets', updatedTickets);
+    saveState('anet_tickets', updatedTickets);
   };
 
   // ADMIN ACTION: Issue Manual Invoice
@@ -279,7 +279,7 @@ export default function App() {
 
     const updatedInvoices = [newInvoice, ...invoices];
     setInvoices(updatedInvoices);
-    saveState('nusanet_invoices', updatedInvoices);
+    saveState('anet_invoices', updatedInvoices);
 
     // Increase customer due balance
     const updatedCusts = customers.map(c => {
@@ -289,7 +289,7 @@ export default function App() {
       return c;
     });
     setCustomers(updatedCusts);
-    saveState('nusanet_customers', updatedCusts);
+    saveState('anet_customers', updatedCusts);
   };
 
   // ADMIN ACTION: Manual Approval Overdue/Unpaid Invoice
@@ -299,11 +299,11 @@ export default function App() {
 
   // Reset Storage back to default to test fresh sandbox
   const handleResetSandbox = () => {
-    if (confirm('Atur ulang kembali semua database dan transaksi NusaNet ke pengaturan awal?')) {
-      localStorage.removeItem('nusanet_customers');
-      localStorage.removeItem('nusanet_plans');
-      localStorage.removeItem('nusanet_invoices');
-      localStorage.removeItem('nusanet_tickets');
+    if (confirm('Atur ulang kembali semua database dan transaksi ANet ke pengaturan awal?')) {
+      localStorage.removeItem('anet_customers');
+      localStorage.removeItem('anet_plans');
+      localStorage.removeItem('anet_invoices');
+      localStorage.removeItem('anet_tickets');
 
       setCustomers(INITIAL_CUSTOMERS);
       setPlans(INITIAL_PLANS);
@@ -332,7 +332,7 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-sm font-black tracking-tight flex items-center gap-1.5 text-slate-100">
-                  NUSA NET
+                  ANET
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 </h1>
                 <p className="text-[10px] text-slate-400 uppercase font-mono tracking-widest">ISP BILLING INTERNET</p>
@@ -455,7 +455,7 @@ export default function App() {
       {/* FOOTER SYSTEM SUMMARY */}
       <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-600 font-sans">
         <div className="max-w-7xl mx-auto px-4 space-y-1">
-          <p className="font-semibold text-slate-500">NusaNet ISP Billing System • v1.4.0 Stable</p>
+          <p className="font-semibold text-slate-500">ANet ISP Billing System • v1.4.0 Stable</p>
           <p>Didesain secara elegan untuk mengapresiasi manajemen core jaringan fiber optik & billing Indonesia.</p>
           <p className="text-[10px] text-slate-700 font-mono pt-1">
             Running in Sandboxed Node Env • Port 3000 Secured Ingress
