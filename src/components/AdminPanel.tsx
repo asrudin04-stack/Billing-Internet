@@ -89,7 +89,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   currentPasswordValue,
   onLogout
 }) => {
-  // Tabs mapped to the Alijaya Left Sidebar
+  // Tabs mapped to the ANet Left Sidebar
   const [activeTab, setActiveTab] = useState<
     | 'dashboard'
     | 'onu'
@@ -122,7 +122,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [waConnectedUser, setWaConnectedUser] = useState(true);
   const [waSendingTest, setWaSendingTest] = useState(false);
   const [waTestNumber, setWaTestNumber] = useState('');
-  const [waTestMessage, setWaTestMessage] = useState('Tes Pesang dari ALIJAYA WEBPORTAL API Gateway.');
+  const [waTestMessage, setWaTestMessage] = useState('Tes Pesan dari ANET WEBPORTAL API Gateway.');
   const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
 
   
@@ -209,6 +209,19 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const recoveryEfficiency = totalCombineSum > 0 
     ? Math.round((totalPaidSum / totalCombineSum) * 100) 
     : 0;
+
+  // Group invoices by period for reporting
+  const periodsData = Array.from(new Set(invoices.map(i => i.period))).sort().map(pr => {
+    const periodInvoices = invoices.filter(i => i.period === pr);
+    const paidSum = periodInvoices.filter(i => i.status === 'paid').reduce((acc, i) => acc + i.amount, 0);
+    const unpaidSum = periodInvoices.filter(i => i.status !== 'paid').reduce((acc, i) => acc + i.amount, 0);
+    return {
+      period: pr,
+      paid: paidSum,
+      unpaid: unpaidSum,
+      total: paidSum + unpaidSum
+    };
+  });
 
   // Filtered queries
   const filteredCustomers = customers.filter(c => 
@@ -506,7 +519,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
           <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white">
             <Wifi className="w-4 h-4 stroke-[2.5]" />
           </div>
-          <span className="font-black text-xs tracking-wider text-slate-200">ALIJAYA WEBPORTAL</span>
+          <span className="font-black text-xs tracking-wider text-slate-200">ANET WEBPORTAL</span>
         </div>
         <button 
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -528,7 +541,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             <Wifi className="w-5 h-5 stroke-[2.5]" />
           </div>
           <div>
-            <h2 className="text-xs font-black tracking-wider text-slate-100 uppercase">ALIJAYA WEBPORTAL</h2>
+            <h2 className="text-xs font-black tracking-wider text-slate-100 uppercase">ANET WEBPORTAL</h2>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
               <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">ADMIN PANEL</p>
@@ -731,7 +744,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-300">Administrator</p>
-              <p className="text-[9px] text-slate-500 font-mono">ID: alijaya_root</p>
+              <p className="text-[9px] text-slate-500 font-mono">ID: anet_root</p>
             </div>
           </div>
           {onLogout && (
@@ -808,7 +821,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <LayoutDashboard className="w-5 h-5 text-indigo-400" />
                     Dashboard Utama
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">Status real-time gateway ONU, billing interkoneksi, dan keluhan klien Alijaya.</p>
+                  <p className="text-xs text-slate-400 mt-1">Status real-time gateway ONU, billing interkoneksi, dan keluhan klien ANet.</p>
                 </div>
                 <div className="flex gap-2">
                   <span className="bg-slate-900 border border-slate-800/80 rounded-lg p-1.5 px-3 text-xs text-slate-300 flex items-center gap-1.5">
@@ -1389,25 +1402,54 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     </div>
                   </div>
 
-                  {/* CPU Load bar */}
-                  <div className="space-y-1.5 pt-2">
-                    <div className="flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-slate-500 uppercase font-black">CPU Load</span>
-                      <span className="text-slate-300 font-bold">14% (Average)</span>
+                  {/* VISUALISASI TERKINI: ROUND DIAL COCKPIT GAUGES */}
+                  <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-800">
+                    {/* CPU Radial Gauge */}
+                    <div className="flex flex-col items-center justify-center bg-slate-950/45 p-4 rounded-xl border border-slate-805">
+                      <div className="relative w-20 h-20 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          {/* Outer track */}
+                          <circle cx="50" cy="50" r="40" stroke="#1e293b" strokeWidth="8" fill="transparent" />
+                          {/* Active arc indicator with neon glow */}
+                          <circle 
+                            cx="50" cy="50" r="40" 
+                            stroke="#818cf8" strokeWidth="8" fill="transparent" 
+                            strokeDasharray="251.2"
+                            strokeDashoffset={251.2 - (251.2 * 14) / 100}
+                            className="transition-all duration-1000 ease-out"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-sm font-black text-slate-100">14%</span>
+                          <span className="text-[7px] uppercase text-indigo-400 font-bold tracking-wider">CPU Core</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-slate-500 font-bold mt-2 uppercase">Load Average</span>
                     </div>
-                    <div className="w-full bg-slate-950 border border-slate-800 h-2.5 rounded-full overflow-hidden p-0.5">
-                      <div className="bg-indigo-400 h-full rounded-full transition-all duration-505" style={{ width: '14%' }} />
-                    </div>
-                  </div>
 
-                  {/* RAM Load bar */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[11px] font-mono">
-                      <span className="text-slate-500 uppercase font-black">Memory RAM Usage</span>
-                      <span className="text-slate-300 font-bold">142 MB / 1024 MB</span>
-                    </div>
-                    <div className="w-full bg-slate-950 border border-slate-800 h-2.5 rounded-full overflow-hidden p-0.5">
-                      <div className="bg-indigo-400 h-full rounded-full transition-all duration-505" style={{ width: '13.8%' }} />
+                    {/* RAM Radial Gauge */}
+                    <div className="flex flex-col items-center justify-center bg-slate-950/45 p-4 rounded-xl border border-slate-805">
+                      <div className="relative w-20 h-20 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                          {/* Outer track */}
+                          <circle cx="50" cy="50" r="40" stroke="#1e293b" strokeWidth="8" fill="transparent" />
+                          {/* Active arc indicator with neon glow */}
+                          <circle 
+                            cx="50" cy="50" r="40" 
+                            stroke="#059669" strokeWidth="8" fill="transparent" 
+                            strokeDasharray="251.2"
+                            strokeDashoffset={251.2 - (251.2 * 13.8) / 100}
+                            className="transition-all duration-1000 ease-out"
+                            strokeLinecap="round"
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-sm font-black text-slate-100">13.8%</span>
+                          <span className="text-[7px] uppercase text-emerald-400 font-bold tracking-wider">RAM Memory</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-slate-500 font-bold mt-2 uppercase">142MB/1GB</span>
                     </div>
                   </div>
                 </div>
@@ -1416,7 +1458,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <div className="md:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md space-y-4">
                   <div>
                     <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">PPPoE Dial-In Active Sessions</h3>
-                    <p className="text-[10px] text-slate-500">Sesi user pppoe yang saat ini sedang melakukan dial jaringan internet Alijaya.</p>
+                    <p className="text-[10px] text-slate-500">Sesi user pppoe yang saat ini sedang melakukan dial jaringan internet ANet.</p>
                   </div>
 
                   <div className="overflow-x-auto">
@@ -1487,15 +1529,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <div className="space-y-3 text-xs font-mono">
                     <div className="flex justify-between">
                       <span className="text-slate-500 font-bold">Linked Phone:</span>
-                      <span className="text-slate-200">+62 823-1122-3344 (Alijaya Bot)</span>
+                      <span className="text-slate-200">+62 823-1122-3344 (ANet Bot)</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500 font-bold">Instance ID Secret:</span>
-                      <span className="text-slate-200 font-bold">inst_ajw_8432</span>
+                      <span className="text-slate-200 font-bold">inst_anet_8432</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500 font-bold">API Gateway URL:</span>
-                      <span className="text-indigo-400 underline">https://api.alijayawifi.com/v1</span>
+                      <span className="text-indigo-400 underline">https://api.anetwifi.com/v1</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-500 font-bold">Engine Core Base:</span>
@@ -1543,7 +1585,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md space-y-4">
                   <div>
                     <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">Kirim Pesan Uji Coba Manual</h3>
-                    <p className="text-[10px] text-slate-500">Gunakan form ini untuk melakukan pengetesan integrasi API bot WhatsApp Alijaya.</p>
+                    <p className="text-[10px] text-slate-500">Gunakan form ini untuk melakukan pengetesan integrasi API bot WhatsApp ANet.</p>
                   </div>
 
                   <form 
@@ -1758,7 +1800,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     <Layers className="w-5 h-5 text-indigo-400" />
                     Manajemen Paket Jasa Internet
                   </h1>
-                  <p className="text-xs text-slate-400 mt-1">Konfigurasi bandwidth upload/download dan harga bulanan paket internet pelanggan Alijaya.</p>
+                  <p className="text-xs text-slate-400 mt-1">Konfigurasi bandwidth upload/download dan harga bulanan paket internet pelanggan ANet.</p>
                 </div>
               </div>
 
@@ -1833,6 +1875,76 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                   <span className="text-[9px] text-slate-500 font-mono block uppercase">PENDAPATAN PROYEKSI MAKSIMAL (MRR CAP)</span>
                   <span className="text-xl font-black text-slate-200 font-mono">{formatIDR(totalCombineSum)}</span>
                   <span className="text-[9px] text-indigo-400 mt-1 block">Rasio lunas efisiensi: {recoveryEfficiency}%</span>
+                </div>
+              </div>
+
+              {/* VISUALISASI TERKINI: BAR CHART REVENUE vs RECEIVABLES */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-3">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-3.5 bg-emerald-400 rounded-sm inline-block"></span>
+                      Grafik Aliran Kas Jaringan ANet (Paid vs Unpaid)
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Studi komparasi penerimaan kas lunas dibandingkan piutang per periode rekening.</p>
+                  </div>
+                  <div className="flex gap-4 text-[10px] font-mono">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded bg-emerald-400"></span>
+                      <span className="text-slate-400 font-bold">Lunas (Paid)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded bg-rose-500"></span>
+                      <span className="text-slate-400 font-bold">Piutang (Receivables)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="w-full h-56 bg-slate-950 border border-slate-805/85 rounded-xl p-4 flex items-end justify-around relative pt-12">
+                  {/* Grid lines */}
+                  <div className="absolute left-4 right-4 top-10 bottom-6 flex flex-col justify-between pointer-events-none opacity-20">
+                    <div className="border-t border-slate-800 w-full"></div>
+                    <div className="border-t border-slate-800 w-full"></div>
+                    <div className="border-t border-slate-800 w-full"></div>
+                    <div className="border-t border-slate-800 w-full"></div>
+                  </div>
+
+                  {periodsData.map((pd) => {
+                    const maxAmount = Math.max(...periodsData.map(p => Math.max(p.paid, p.unpaid)), 100000);
+                    const paidPercent = (pd.paid / maxAmount) * 100;
+                    const unpaidPercent = (pd.unpaid / maxAmount) * 100;
+
+                    return (
+                      <button 
+                        key={pd.period} 
+                        onClick={() => setSelectedPeriodFilter(pd.period)}
+                        className="flex flex-col items-center group relative z-15 hover:bg-slate-900/10 p-1.5 rounded-lg border border-transparent focus:outline-none focus:border-indigo-500/20"
+                      >
+                        {/* Interactive floating indicator */}
+                        <div className="absolute -top-14 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/95 backdrop-blur-md border border-slate-700/60 text-[10px] p-2.5 rounded-xl shadow-xl pointer-events-none text-center min-w-[130px] font-sans -left-1/2 -translate-x-1/8 z-50">
+                          <p className="font-bold text-slate-100 mb-1 font-mono">{pd.period}</p>
+                          <p className="text-emerald-400 font-mono font-bold flex items-center justify-between"><span>Lunas:</span> <span>{formatIDR(pd.paid)}</span></p>
+                          <p className="text-rose-400 font-mono font-bold flex items-center justify-between"><span>Piutang:</span> <span>{formatIDR(pd.unpaid)}</span></p>
+                        </div>
+
+                        <div className="flex items-end gap-2 h-32">
+                          {/* Paid Bar */}
+                          <div 
+                            className="w-6 bg-gradient-to-t from-emerald-600 to-emerald-400 rounded-t border-t border-emerald-350 shadow-lg shadow-emerald-500/5 group-hover:scale-y-105 transition duration-300"
+                            style={{ height: `${Math.max(paidPercent, 4)}%` }}
+                          />
+                          {/* Unpaid Bar */}
+                          <div 
+                            className="w-6 bg-gradient-to-t from-rose-600 to-rose-450 rounded-t border-t border-rose-400 shadow-lg shadow-rose-500/5 group-hover:scale-y-105 transition duration-350"
+                            style={{ height: `${Math.max(unpaidPercent, 4)}%` }}
+                          />
+                        </div>
+
+                        {/* Periode label */}
+                        <span className="text-[10px] font-mono font-bold text-slate-405 mt-2.5">{pd.period}</span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1914,7 +2026,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     id: 'tech-bambang',
                     name: 'Bambang Santoso',
                     skills: 'Splicing FO Core, OPM Trace, OSP Overhead',
-                    zone: 'Sektor Barat (Alijaya Utara)',
+                    zone: 'Sektor Barat (ANet Utara)',
                     phone: '+62 821-2233-1100',
                     status: 'Tersedia',
                     currentTask: 'None'
@@ -1923,7 +2035,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     id: 'tech-andi',
                     name: 'Andi Kuswira',
                     skills: 'Setting Mikrotik PPPoE, Dynamic Routing DHCP',
-                    zone: 'Sektor Pusat (Alijaya Tengah)',
+                    zone: 'Sektor Pusat (ANet Tengah)',
                     phone: '+62 819-4560-8800',
                     status: 'Selesai Tugas',
                     currentTask: 'Maintenance Redaman di ODP Seroja'
@@ -1932,7 +2044,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                     id: 'tech-hendra',
                     name: 'Hendra Saputra',
                     skills: 'Splicing Dropcore, CATV Cable, ONU Configuration',
-                    zone: 'Sektor Selatan (Alijaya Selatan)',
+                    zone: 'Sektor Selatan (ANet Selatan)',
                     phone: '+62 858-9900-1122',
                     status: 'Di Lapangan',
                     currentTask: 'Penarikan Dropcore Baru Klien Lestari'
