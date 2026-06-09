@@ -29,7 +29,26 @@ import {
   Lock,
   Key,
   Eye,
-  EyeOff
+  EyeOff,
+  LayoutDashboard,
+  Server,
+  Megaphone,
+  Radio,
+  HardDrive,
+  RefreshCw,
+  LogOut,
+  Menu,
+  X,
+  Router,
+  Wifi,
+  ShieldCheck,
+  Mail,
+  Phone,
+  MapPin,
+  Receipt,
+  Settings,
+  Layers,
+  Calendar
 } from 'lucide-react';
 import { Customer, Invoice, Ticket, SpeedPlan, CustomerStatus } from '../types';
 
@@ -49,6 +68,7 @@ interface AdminPanelProps {
   onUpdateTicketStatus: (ticketId: string, status: Ticket['status']) => void;
   onUpdatePassword: (newPass: string) => void;
   currentPasswordValue: string;
+  onLogout?: () => void;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({
@@ -66,10 +86,45 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onSendTicketReply,
   onUpdateTicketStatus,
   onUpdatePassword,
-  currentPasswordValue
+  currentPasswordValue,
+  onLogout
 }) => {
-  // Tabs: 'customers' | 'billing' | 'tickets' | 'security'
-  const [activeTab, setActiveTab] = useState<'customers' | 'billing' | 'tickets' | 'security'>('customers');
+  // Tabs mapped to the Alijaya Left Sidebar
+  const [activeTab, setActiveTab] = useState<
+    | 'dashboard'
+    | 'onu'
+    | 'mikrotik'
+    | 'whatsapp_status'
+    | 'whatsapp_broadcast'
+    | 'customers'
+    | 'paket'
+    | 'billing'
+    | 'laporan'
+    | 'tickets'
+    | 'teknisi'
+    | 'security'
+  >('dashboard');
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [liveUpdateActive, setLiveUpdateActive] = useState(true);
+  
+  // States for billing reports, Broadcaster, and ONU interactions
+  const [onuRefreshSpin, setOnuRefreshSpin] = useState(false);
+  const [rebootingOnuId, setRebootingOnuId] = useState<string | null>(null);
+  const [broadcastTemplate, setBroadcastTemplate] = useState(
+    'Halo {nama}, tagihan internet {paket} Anda sebesar {jumlah} untuk periode {periode} telah diterbitkan. Harap lakukan pembayaran sebelum tanggal jatuh tempo {jatuh_tempo} untuk menghindari isolir otomatis. Terima kasih.'
+  );
+  const [selectedBroadcastFilter, setSelectedBroadcastFilter] = useState<'all' | 'unpaid'>('unpaid');
+  const [broadcastProgress, setBroadcastProgress] = useState<number | null>(null);
+  const [broadcastLogs, setBroadcastLogs] = useState<string[]>([
+    '[WA DB] Sistem Broadcast Siap.'
+  ]);
+  const [waConnectedUser, setWaConnectedUser] = useState(true);
+  const [waSendingTest, setWaSendingTest] = useState(false);
+  const [waTestNumber, setWaTestNumber] = useState('');
+  const [waTestMessage, setWaTestMessage] = useState('Tes Pesang dari ALIJAYA WEBPORTAL API Gateway.');
+  const [selectedTechnicianId, setSelectedTechnicianId] = useState<string | null>(null);
+
   
   // Password change states
   const [oldPasswordInput, setOldPasswordInput] = useState('');
@@ -443,284 +498,1495 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="flex w-full min-h-screen bg-slate-950 text-slate-100 font-sans overflow-hidden">
       
-      {/* KPI TOP METRIC ROW */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        {/* KPI 1 */}
-        <div className="bg-slate-900 border border-slate-800 p-4.5 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <TrendingUp className="w-5 h-5" />
+      {/* MOBILE HEADER BUTTON BAR */}
+      <div className="md:hidden fixed top-0 left-0 right-0 h-14 bg-slate-900 border-b border-slate-800 z-50 px-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-indigo-500 flex items-center justify-center text-white">
+            <Wifi className="w-4 h-4 stroke-[2.5]" />
           </div>
-          <div>
-            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 block">MRR Est. Aktif</span>
-            <span className="text-base font-extrabold text-slate-100 font-mono">{formatIDR(totalMRR)}</span>
-            <span className="text-[10px] text-emerald-400 block mt-0.5">Pendapatan bulanan berulang</span>
-          </div>
+          <span className="font-black text-xs tracking-wider text-slate-200">ALIJAYA WEBPORTAL</span>
         </div>
-
-        {/* KPI 2 */}
-        <div className="bg-slate-900 border border-slate-800 p-4.5 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <Users className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 block">Total Pelanggan</span>
-            <span className="text-base font-extrabold text-slate-100 font-mono">
-              {customers.length} <span className="text-xs font-normal text-slate-400">({activeCustomers.length} Aktif)</span>
-            </span>
-            <span className="text-[10px] text-amber-400 block mt-0.5">{suspendedCustomers.length} Isolir/Suspended</span>
-          </div>
-        </div>
-
-        {/* KPI 3 */}
-        <div className="bg-slate-900 border border-slate-800 p-4.5 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <Cpu className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 block">Alokasi Bandwidth</span>
-            <span className="text-base font-extrabold text-slate-100 font-mono">{totalBandwidth} Mbps</span>
-            <span className="text-[10px] text-slate-400 block mt-0.5">Pool Fiber Gateway Core-01</span>
-          </div>
-        </div>
-
-        {/* KPI 4 */}
-        <div className="bg-slate-900 border border-slate-800 p-4.5 rounded-2xl flex items-center gap-4 shadow-sm">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-            <LifeBuoy className="w-5 h-5" />
-          </div>
-          <div>
-            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 block">Pemberitahuan</span>
-            <span className="text-base font-extrabold text-slate-100 font-mono">{openTicketCount} Antrean</span>
-            <span className="text-[10px] text-amber-400 block mt-0.5">{pendingInvoiceCount} Tagihan Belum Dibayar</span>
-          </div>
-        </div>
-
+        <button 
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="p-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-300 active:bg-slate-800"
+        >
+          {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
       </div>
 
-      {/* SEKSI REKAP PEMBAYARAN & CHART (PAID VS UNPAID) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div>
-            <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
-              <span className="w-1.5 h-3.5 bg-emerald-400 rounded-sm inline-block"></span>
-              REKAP & VISUALISASI STATUS PEMBAYARAN
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Pantau total penerimaan lunas (Paid) dan piutang tagihan tertunda (Unpaid/Overdue) secara dinamis.
-            </p>
+      {/* LEFT SIDEBAR (Desktop Fixed, Mobile Drawer) */}
+      <aside className={`
+        fixed inset-y-0 left-0 z-40 w-64 bg-slate-900 border-r border-slate-800/80 flex flex-col transition-transform duration-300 select-none
+        md:translate-x-0 md:static md:h-screen
+        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* LOGO & BRAND */}
+        <div className="p-4 border-b border-slate-800 flex items-center gap-3 bg-slate-950/40">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center text-slate-950 shadow-md shadow-indigo-500/10">
+            <Wifi className="w-5 h-5 stroke-[2.5]" />
           </div>
+          <div>
+            <h2 className="text-xs font-black tracking-wider text-slate-100 uppercase">ALIJAYA WEBPORTAL</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse inline-block"></span>
+              <p className="text-[10px] text-slate-500 font-mono tracking-widest uppercase">ADMIN PANEL</p>
+            </div>
+          </div>
+        </div>
+
+        {/* SIDEBAR NAVIGATION ITEMS */}
+        <nav className="flex-1 overflow-y-auto p-4 space-y-5 custom-scrollbar">
           
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-bold">Filter Periode:</span>
-            <select
-              value={selectedPeriodFilter}
-              onChange={e => setSelectedPeriodFilter(e.target.value)}
-              className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 px-3 text-xs text-slate-300 focus:outline-none focus:border-slate-700 font-sans cursor-pointer"
+          {/* GROUP 1: UTAMA */}
+          <div className="space-y-1.5">
+            <h3 className="text-[10px] font-bold text-slate-500 tracking-wider font-mono uppercase pl-2">UTAMA</h3>
+            
+            <button
+              onClick={() => { setActiveTab('dashboard'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'dashboard'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
             >
-              <option value="all">Semua Periode ({invoices.length} Invoice)</option>
-              {uniquePeriods.map(p => (
-                <option key={p} value={p}>{p} ({invoices.filter(i => i.period === p).length} Invoice)</option>
-              ))}
-            </select>
-          </div>
-        </div>
+              <LayoutDashboard className="w-4 h-4" />
+              Dashboard
+            </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-          
-          {/* SISI KIRI: SVG DONUT CHART */}
-          <div className="md:col-span-4 flex flex-col items-center justify-center p-4 bg-slate-950/40 rounded-xl border border-slate-800/40 min-h-[190px]">
-            <div className="relative w-32 h-32">
-              {/* SVG Ring Donut */}
-              <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                {/* Track Circle (Red/Rose-950, representing unpaid/remaining progress) */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  className="stroke-rose-950 fill-transparent"
-                  strokeWidth="10"
-                />
-                {/* Progress Circle (Emerald-400, representing paid amount) */}
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  className="stroke-emerald-400 fill-transparent transition-all duration-1000 ease-out"
-                  strokeWidth="10"
-                  strokeDasharray="251.3"
-                  strokeDashoffset={251.3 - (recoveryEfficiency / 100) * 251.3}
-                  strokeLinecap="round"
-                />
-              </svg>
-              {/* Centered Percentage Label */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-2xl font-black text-slate-100 font-mono tracking-tighter">
-                  {recoveryEfficiency}%
-                </span>
-                <span className="text-[9px] uppercase font-bold tracking-widest text-slate-500 font-sans mt-0.5">
-                  Lunas
-                </span>
-              </div>
-            </div>
+            <button
+              onClick={() => { setActiveTab('onu'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'onu'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <HardDrive className="w-4 h-4" />
+              Monitoring ONU
+              <span className="ml-auto bg-rose-500/10 text-rose-400 font-mono font-bold text-[9px] px-1.5 py-0.5 rounded-lg border border-rose-500/10">11</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('mikrotik'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'mikrotik'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <Server className="w-4 h-4" />
+              Monitoring MikroTik
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('whatsapp_status'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'whatsapp_status'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Status WhatsApp
+              <span className="ml-auto bg-emerald-500/10 text-emerald-400 font-mono text-[9px] font-black px-1.5 py-0.5 rounded-lg border border-emerald-500/10">LIVE</span>
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('whatsapp_broadcast'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'whatsapp_broadcast'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <Megaphone className="w-4 h-4" />
+              Broadcast WA
+            </button>
+          </div>
+
+          {/* GROUP 2: BILLING */}
+          <div className="space-y-1.5">
+            <h3 className="text-[10px] font-bold text-slate-500 tracking-wider font-mono uppercase pl-2">BILLING</h3>
             
-            <div className="flex gap-4 mt-3 text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
-                <span className="text-slate-400">Paid ({countPaid})</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span className="text-slate-400">Unpaid ({countUnpaid})</span>
-              </div>
-            </div>
+            <button
+              onClick={() => { setActiveTab('customers'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'customers'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              Pelanggan
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('paket'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'paket'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <Layers className="w-4 h-4" />
+              Paket Internet
+            </button>
+
+            <button
+              onClick={() => { 
+                setActiveTab('billing'); 
+                setMobileMenuOpen(false);
+                if (customers.length > 0 && !invCustomerId) {
+                  setInvCustomerId(customers[0].id);
+                }
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'billing'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <CreditCard className="w-4 h-4" />
+              Tagihan
+              {pendingInvoiceCount > 0 && (
+                <span className="ml-auto bg-rose-500 text-white font-mono font-bold text-[9px] px-1.5 py-0.5 rounded-full">
+                  {pendingInvoiceCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('laporan'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'laporan'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <TrendingUp className="w-4 h-4" />
+              Laporan Keuangan
+            </button>
           </div>
 
-          {/* SISI KANAN: DUA BARIS KARTU & LINEAR BAR RATIO */}
-          <div className="md:col-span-8 space-y-4">
-            
-            {/* STACKED HORIZONTAL BAR & LABELS */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-[11px] font-sans">
-                <span className="text-slate-400">Distribusi Rasio Nominal</span>
-                <span className="text-emerald-400 font-mono font-bold">
-                  {recoveryEfficiency}% Lunas <span className="text-slate-600">|</span> <span className="text-rose-400">{100 - recoveryEfficiency}% Pending</span>
+          {/* GROUP 3: LAYANAN */}
+          <div className="space-y-1.5">
+            <h3 className="text-[10px] font-bold text-slate-500 tracking-wider font-mono uppercase pl-2">LAYANAN</h3>
+
+            <button
+              onClick={() => { setActiveTab('tickets'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'tickets'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <LifeBuoy className="w-4 h-4" />
+              Keluhan Pelanggan
+              {openTicketCount > 0 && (
+                <span className="ml-auto bg-amber-500 text-slate-950 font-mono font-black text-[9px] px-1.5 py-0.5 rounded-full animate-pulse">
+                  {openTicketCount}
                 </span>
-              </div>
-              
-              {/* Bar line background container */}
-              <div className="w-full h-3.5 bg-slate-950 rounded-full overflow-hidden flex border border-slate-800 p-0.5">
-                <div 
-                  className="bg-emerald-400 rounded-full h-full transition-all duration-1000 ease-out shadow-sm" 
-                  style={{ width: `${recoveryEfficiency}%` }}
-                />
-                <div 
-                  className="bg-rose-500/80 rounded-full h-full transition-all duration-1000 ease-out" 
-                  style={{ width: `${100 - recoveryEfficiency}%` }}
-                />
-              </div>
-            </div>
-
-            {/* DETAIL SUMMARY CARDS GRID */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              
-              {/* KARTU PAID */}
-              <div className="bg-slate-950/30 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-800 transition-colors">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-500 font-bold">Sudah Dibayar (Lunas)</span>
-                  <span className="bg-emerald-500/10 text-emerald-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-emerald-500/20">
-                    {countPaid} Invoice
-                  </span>
-                </div>
-                <div className="text-lg font-black text-slate-100 font-mono">
-                  {formatIDR(totalPaidSum)}
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1 font-sans">Aliran kas masuk yang berhasil diamankan.</p>
-              </div>
-
-              {/* KARTU UNPAID / DELINQUENT */}
-              <div className="bg-slate-950/30 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-800 transition-colors">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-rose-500 font-bold">Tertunggak (Belum Bayar)</span>
-                  <span className="bg-rose-500/10 text-rose-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-rose-500/20">
-                    {countUnpaid} Invoice
-                  </span>
-                </div>
-                <div className="text-lg font-black text-slate-100 font-mono">
-                  {formatIDR(totalUnpaidSum)}
-                </div>
-                <p className="text-[10px] text-slate-500 mt-1 font-sans">Target kolektibilitas penagihan gateway.</p>
-              </div>
-
-            </div>
-
-            {/* QUICK STATS FOOTER LINE */}
-            <div className="grid grid-cols-3 gap-2 bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/30 text-center text-[10px] font-sans">
-              <div>
-                <span className="text-slate-500 block">Total Rencana Tagihan</span>
-                <span className="text-slate-300 font-mono font-bold">{formatIDR(totalCombineSum)}</span>
-              </div>
-              <div className="border-x border-slate-800/30">
-                <span className="text-slate-500 block">Indeks Penagihan</span>
-                <span className="text-slate-300 font-mono font-bold">{recoveryEfficiency}% Efisien</span>
-              </div>
-              <div>
-                <span className="text-slate-500 block">Rata-rata Tagihan</span>
-                <span className="text-slate-300 font-mono font-bold">
-                  {formatIDR(countTotal > 0 ? Math.round(totalCombineSum / countTotal) : 0)}
-                </span>
-              </div>
-            </div>
-
+              )}
+            </button>
           </div>
 
-        </div>
-      </div>
+          {/* GROUP 4: MANAJEMEN */}
+          <div className="space-y-1.5">
+            <h3 className="text-[10px] font-bold text-slate-500 tracking-wider font-mono uppercase pl-2">MANAJEMEN</h3>
 
-      {/* ADMIN SUB-TABS SELECTOR RULER */}
-      <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex gap-2 w-max shadow-sm">
-        <button
-          onClick={() => setActiveTab('customers')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-            activeTab === 'customers'
-              ? 'bg-emerald-400 text-slate-950 shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Users className="w-4 h-4" />
-          Data Pelanggan
-        </button>
-        <button
-          onClick={() => {
-            setActiveTab('billing');
-            // Select first customer as default for billing generator
-            if (customers.length > 0 && !invCustomerId) {
-              setInvCustomerId(customers[0].id);
-            }
-          }}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-            activeTab === 'billing'
-              ? 'bg-emerald-400 text-slate-950 shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <CreditCard className="w-4 h-4" />
-          Billing & Invoice
-        </button>
-        <button
-          onClick={() => setActiveTab('tickets')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-            activeTab === 'tickets'
-              ? 'bg-emerald-400 text-slate-950 shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <MessageSquare className="w-4 h-4" />
-          Pusat Kendala / Tiket Support
-          {openTicketCount > 0 && (
-            <span className="bg-rose-500 text-white font-mono text-[9px] px-1.5 py-0.2 rounded-full font-black animate-pulse">
-              {openTicketCount}
-            </span>
+            <button
+              onClick={() => { setActiveTab('teknisi'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'teknisi'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <UserCheck className="w-4 h-4" />
+              Teknisi Roster
+            </button>
+
+            <button
+              onClick={() => { setActiveTab('security'); setMobileMenuOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all ${
+                activeTab === 'security'
+                  ? 'bg-indigo-500/10 border border-indigo-500/20 text-indigo-400'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-950/40 border border-transparent'
+              }`}
+            >
+              <Lock className="w-4 h-4" />
+              Keamanan Sandi
+            </button>
+          </div>
+
+        </nav>
+
+        {/* SIDEBAR FOOTER */}
+        <div className="p-4 border-t border-slate-800 bg-slate-950/60 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-bold text-indigo-300">
+              AD
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-300">Administrator</p>
+              <p className="text-[9px] text-slate-500 font-mono">ID: alijaya_root</p>
+            </div>
+          </div>
+          {onLogout && (
+            <button
+              onClick={onLogout}
+              className="p-1.5 hover:bg-rose-500/10 rounded-lg text-slate-400 hover:text-rose-400 transition"
+              title="Kunci Sesi"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           )}
-        </button>
-        <button
-          onClick={() => setActiveTab('security')}
-          className={`px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-            activeTab === 'security'
-              ? 'bg-emerald-400 text-slate-950 shadow-md'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          <Lock className="w-4 h-4" />
-          Keamanan Sandi
-        </button>
-      </div>
+        </div>
+      </aside>
 
-      {/* TAB SUBSECTIONS */}
-      {activeTab === 'customers' && (
-        <div className="space-y-4">
+      {/* BACKDROP FOR MOBILE */}
+      {mobileMenuOpen && (
+        <div 
+          onClick={() => setMobileMenuOpen(false)}
+          className="md:hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-30"
+        />
+      )}
+
+      {/* RIGHT DISPLAY PANEL CONTAINER */}
+      <div className="flex-1 flex flex-col min-h-screen bg-slate-950 overflow-y-auto w-full pt-14 md:pt-0">
+        
+        {/* TOP STATUS BAR HEADER */}
+        <header className="bg-slate-900 border-b border-slate-800/80 px-4 sm:px-6 h-14 flex items-center justify-between flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-bold hidden sm:inline-block">Status Jaringan:</span>
+            <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800 text-[10px] text-emerald-400">
+              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse inline-block"></span>
+              CORE GATEWAY OK
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {/* Live Update Switcher */}
+            <button 
+              onClick={() => setLiveUpdateActive(!liveUpdateActive)}
+              className="flex items-center gap-1.5 bg-slate-950 hover:bg-slate-800 p-1.5 px-3 rounded-lg border border-slate-800 text-[10px] font-bold transition duration-200"
+            >
+              <span className={`w-1.5 h-1.5 rounded-full ${liveUpdateActive ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'}`}></span>
+              <span className={liveUpdateActive ? 'text-slate-300' : 'text-slate-500'}>Live Update</span>
+            </button>
+
+            <span className="text-[10px] font-black uppercase text-indigo-400 bg-indigo-500/10 border border-indigo-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-indigo-400" />
+              Role: Admin
+            </span>
+
+            {onLogout && (
+              <button
+                onClick={onLogout}
+                className="text-[10px] font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 border border-rose-500/20 p-1.5 px-2.5 rounded-lg transition-all flex items-center gap-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Kunci Sesi</span>
+              </button>
+            )}
+          </div>
+        </header>
+
+        {/* CONTAINER VIEWPORT WORKSPACE */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl w-full mx-auto pb-12">
+          
+          {/* ================= tab: dashboard ================= */}
+          {activeTab === 'dashboard' && (
+            <div className="space-y-6">
+              
+              {/* Header section with page title */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <LayoutDashboard className="w-5 h-5 text-indigo-400" />
+                    Dashboard Utama
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Status real-time gateway ONU, billing interkoneksi, dan keluhan klien Alijaya.</p>
+                </div>
+                <div className="flex gap-2">
+                  <span className="bg-slate-900 border border-slate-800/80 rounded-lg p-1.5 px-3 text-xs text-slate-300 flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-400" />
+                    Juni 2026
+                  </span>
+                </div>
+              </div>
+
+              {/* SECTION: ONU STATUSES GRID IN THE SCREENSHOT */}
+              <div className="space-y-2">
+                <h3 className="text-[10px] font-black text-slate-500 tracking-wider font-mono uppercase pl-1">STATUS KONEKSI TERMINAL GPON / ONU</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Total ONU registered */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl relative overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400 block font-bold">TOTAL ONU</span>
+                      <HardDrive className="w-4 h-4 text-slate-500" />
+                    </div>
+                    <div className="text-2xl font-black text-slate-100 font-mono mt-1">115</div>
+                    <span className="text-[10px] text-slate-500 mt-1 block">Perangkat terdaftar di OLT</span>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-slate-800/10 rounded-full blur-2xl pointer-events-none" />
+                  </div>
+
+                  {/* Online ONUs */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl relative overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400 block font-bold">ONLINE</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    </div>
+                    <div className="text-2xl font-black text-emerald-400 font-mono mt-1">104</div>
+                    <span className="text-[10px] text-emerald-500/80 mt-1 block">GPON aktif saat ini</span>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
+                  </div>
+
+                  {/* Offline ONUs */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl relative overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400 block font-bold">OFFLINE</span>
+                      <button 
+                        onClick={() => {
+                          setOnuRefreshSpin(true);
+                          setTimeout(() => setOnuRefreshSpin(false), 1200);
+                        }}
+                        className="text-slate-500 hover:text-slate-300 transition"
+                        title="Perbarui data OLT"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${onuRefreshSpin ? 'animate-spin text-indigo-400' : ''}`} />
+                      </button>
+                    </div>
+                    <div className="text-2xl font-black text-rose-500 font-mono mt-1">11</div>
+                    <span className="text-[10px] text-rose-500/80 mt-1 block">LOS / Redaman kritis</span>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-rose-500/5 rounded-full blur-2xl pointer-events-none" />
+                  </div>
+
+                  {/* Warnings */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl relative overflow-hidden shadow-sm">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-slate-400 block font-bold">WARNING</span>
+                      <AlertTriangle className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="text-2xl font-black text-amber-500 font-mono mt-1">0</div>
+                    <span className="text-[10px] text-amber-500/80 mt-1 block">Perlu perhatian mekanis</span>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION: BILLING KPI SUMMARY */}
+              <div className="space-y-2">
+                <h3 className="text-[10px] font-black text-slate-500 tracking-wider font-mono uppercase pl-1">RINGKASAN BILLING BULAN INI</h3>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Pendapatan Bulan Ini */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-3.5 shadow-sm">
+                    <div className="w-9 h-9 rounded-lg bg-indigo-500/15 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                      <TrendingUp className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-slate-500 block font-bold">PENDAPATAN</span>
+                      <span className="text-sm font-extrabold text-slate-100 font-mono">{formatIDR(totalPaidSum)}</span>
+                      <span className="text-[9px] text-indigo-400 block mt-0.5">Sudah terkumpul (Lunas)</span>
+                    </div>
+                  </div>
+
+                  {/* Pelanggan Aktif */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-3.5 shadow-sm">
+                    <div className="w-9 h-9 rounded-lg bg-emerald-400/15 border border-emerald-400/20 text-emerald-400 flex items-center justify-center">
+                      <Users className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-slate-500 block font-bold">PELANGGAN AKTIF</span>
+                      <span className="text-sm font-extrabold text-slate-100 font-mono">
+                        {activeCustomers.length} <span className="text-[10px] font-normal text-slate-500">/{customers.length} total</span>
+                      </span>
+                      <span className="text-[9px] text-slate-400 block mt-0.5">Sesi PPPoE terinterkoneksi</span>
+                    </div>
+                  </div>
+
+                  {/* Tagihan Belum Bayar */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-3.5 shadow-sm">
+                    <div className="w-9 h-9 rounded-lg bg-rose-500/15 border border-rose-500/20 text-rose-400 flex items-center justify-center">
+                      <CreditCard className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-slate-500 block font-bold">TAGIHAN AKTIF</span>
+                      <span className="text-sm font-extrabold text-slate-100 font-mono">{countUnpaid}</span>
+                      <span className="text-[9px] text-rose-500 block mt-0.5">Menunggu pembayaran</span>
+                    </div>
+                  </div>
+
+                  {/* Total Piutang */}
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center gap-3.5 shadow-sm">
+                    <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/20 text-amber-500 flex items-center justify-center">
+                      <FileText className="w-4.5 h-4.5" />
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-slate-500 block font-bold">TOTAL PIUTANG</span>
+                      <span className="text-sm font-extrabold text-slate-100 font-mono">{formatIDR(totalUnpaidSum)}</span>
+                      <span className="text-[9px] text-amber-500 block mt-0.5">Belum tertagih / Lunas parsial</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* GRID BOX FOR STATUS ONU DONUT AND ACTION CARDS */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                {/* ONU Donut Chart Box (90% online as shown in image) */}
+                <div className="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-3 bg-indigo-400 rounded-sm inline-block"></span>
+                      Status Koneksi ONU
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Visualisasi efisiensi interkoneksi terminal optik di lapangan.</p>
+                  </div>
+
+                  {/* Donut SVG container */}
+                  <div className="my-5 flex justify-center items-center relative">
+                    <svg className="w-32 h-32 transform -rotate-90">
+                      {/* Trail circle (Offline 10%) */}
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="52"
+                        stroke="#f43f5e"
+                        strokeWidth="10"
+                        fill="transparent"
+                        className="opacity-20"
+                      />
+                      {/* Active Circle (Online 90%) */}
+                      <circle
+                        cx="64"
+                        cy="64"
+                        r="52"
+                        stroke="#10b981"
+                        strokeWidth="10"
+                        fill="transparent"
+                        strokeDasharray="326.7"
+                        strokeDashoffset="32.67" /* 90% */
+                        className="transition-all duration-1000 ease-out"
+                      />
+                    </svg>
+                    {/* Inner percentage metrics */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className="text-xl font-bold font-mono text-slate-100">90.4%</span>
+                      <span className="text-[9px] uppercase font-mono tracking-widest text-emerald-400 font-black">ONLINE</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 text-xs">
+                    <div className="flex items-center justify-between p-1 bg-slate-950/40 rounded px-2">
+                      <span className="text-slate-400 flex items-center gap-1.5 font-sans">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                        Active ONUs
+                      </span>
+                      <span className="font-mono font-bold text-slate-200">104</span>
+                    </div>
+                    <div className="flex items-center justify-between p-1 bg-slate-950/40 rounded px-2">
+                      <span className="text-slate-400 flex items-center gap-1.5 font-sans">
+                        <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                        Offline ONUs
+                      </span>
+                      <span className="font-mono font-bold text-slate-200">11</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Quick Actions (Aksi Cepat) Grid in the screenshot */}
+                <div className="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-3 bg-indigo-400 rounded-sm inline-block"></span>
+                      Aksi Cepat Menu
+                    </h3>
+                    <p className="text-[10px] text-slate-500 mt-1">Pintasan administrasi untuk mempercepat manajemen interkoneksi router.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5 my-4">
+                    {/* Button 1: Tambah Pelanggan */}
+                    <button 
+                      onClick={() => { setActiveTab('customers'); setShowAddCustForm(true); }}
+                      className="p-3.5 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all duration-200 text-left group"
+                    >
+                      <Users className="w-5 h-5 text-indigo-400 mb-2 group-hover:scale-110 transition" />
+                      <span className="text-xs font-bold text-slate-200 block">Tambah Pelanggan</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 block">Registrasi pppoe & OLT</span>
+                    </button>
+
+                    {/* Button 2: Kelola Paket */}
+                    <button 
+                      onClick={() => setActiveTab('paket')}
+                      className="p-3.5 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all duration-200 text-left group"
+                    >
+                      <Layers className="w-5 h-5 text-indigo-400 mb-2 group-hover:scale-110 transition" />
+                      <span className="text-xs font-bold text-slate-200 block">Kelola Paket</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 block">Konfigurasi bandwidth</span>
+                    </button>
+
+                    {/* Button 3: Buat Tagihan */}
+                    <button 
+                      onClick={() => { setActiveTab('billing'); setShowAddInvoiceForm(true); }}
+                      className="p-3.5 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all duration-200 text-left group"
+                    >
+                      <FileText className="w-5 h-5 text-indigo-400 mb-2 group-hover:scale-110 transition" />
+                      <span className="text-xs font-bold text-slate-200 block">Buat Tagihan</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 block">Penerbitan baru manual</span>
+                    </button>
+
+                    {/* Button 4: Laporan */}
+                    <button 
+                      onClick={() => setActiveTab('laporan')}
+                      className="p-3.5 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all duration-200 text-left group"
+                    >
+                      <TrendingUp className="w-5 h-5 text-indigo-400 mb-2 group-hover:scale-110 transition" />
+                      <span className="text-xs font-bold text-slate-200 block">Laporan</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 block">Arus keuangan bulanan</span>
+                    </button>
+
+                    {/* Button 5: Monitor ONU */}
+                    <button 
+                      onClick={() => setActiveTab('onu')}
+                      className="p-3.5 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all duration-200 text-left group"
+                    >
+                      <HardDrive className="w-5 h-5 text-indigo-400 mb-2 group-hover:scale-110 transition" />
+                      <span className="text-xs font-bold text-slate-200 block">Monitor ONU</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 block">Cek level signal laser</span>
+                    </button>
+
+                    {/* Button 6: Bulk Config */}
+                    <button 
+                      onClick={() => setActiveTab('security')}
+                      className="p-3.5 bg-slate-950 border border-slate-800 hover:border-slate-700 hover:bg-slate-900 rounded-xl transition-all duration-200 text-left group"
+                    >
+                      <Lock className="w-5 h-5 text-indigo-400 mb-2 group-hover:scale-110 transition" />
+                      <span className="text-xs font-bold text-slate-200 block">Keamanan Sandi</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5 block">Credential gating terminal</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* SEKSI REKAP PEMBAYARAN & CHART (PAID VS UNPAID) - Placed directly on dashboard */}
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-md relative overflow-hidden space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-805 pb-4">
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                      <span className="w-1.5 h-3.5 bg-emerald-400 rounded-sm inline-block"></span>
+                      REKAP & VISUALISASI STATUS PEMBAYARAN
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Pantau total penerimaan lunas (Paid) dan piutang tagihan tertunda (Unpaid/Overdue) secara dinamis.
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-slate-500 font-bold">Filter Periode:</span>
+                    <select
+                      value={selectedPeriodFilter}
+                      onChange={e => setSelectedPeriodFilter(e.target.value)}
+                      className="bg-slate-950 border border-slate-800 rounded-lg p-1.5 px-3 text-xs text-slate-300 focus:outline-none focus:border-slate-700 font-sans cursor-pointer"
+                    >
+                      <option value="all">Semua Periode ({invoices.length} Invoice)</option>
+                      {uniquePeriods.map(p => (
+                        <option key={p} value={p}>{p} ({invoices.filter(i => i.period === p).length} Invoice)</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex flex-col md:flex-row items-center gap-6 py-2">
+                  {/* LEFT: DONUT VISUALIZATION WITH HOVER EFFECTS */}
+                  <div className="w-full md:w-1/3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-805 pb-6 md:pb-0 md:pr-6">
+                    <div className="relative w-40 h-40 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                        {/* UNPAID RING (unpaid/overdue is red) */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          stroke="#ef4444" 
+                          strokeWidth="10"
+                          fill="transparent"
+                          className="text-rose-500"
+                        />
+                        {/* PAID RING (paid is green) */}
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="40"
+                          stroke="#10b981" 
+                          strokeWidth="10"
+                          fill="transparent"
+                          strokeDasharray="251.2"
+                          strokeDashoffset={251.2 - (251.2 * recoveryEfficiency) / 100}
+                          className="transition-all duration-1000 ease-out text-emerald-400"
+                        />
+                      </svg>
+                      {/* Percent badge overlay */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center">
+                        <span className="text-2xl font-black font-mono text-slate-50">{recoveryEfficiency}%</span>
+                        <span className="text-[8px] uppercase tracking-widest font-bold text-slate-400">Efisiensi Kas</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* RIGHT: DETAILED METRICS AND STATS BLOCK */}
+                  <div className="flex-1 w-full space-y-4">
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-slate-300">Rasio Kolektibilitas Tagihan</span>
+                        <span className="font-mono text-emerald-400 font-bold">{recoveryEfficiency}% Lunas</span>
+                      </div>
+                      <div className="w-full bg-slate-950 rounded-full h-3.5 border border-slate-800 p-0.5 overflow-hidden">
+                        <div 
+                          className="bg-emerald-400 rounded-full h-full transition-all duration-1000 ease-out" 
+                          style={{ width: `${recoveryEfficiency}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {/* CARTU PAID */}
+                      <div className="bg-slate-950/30 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-800 transition-colors">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] uppercase font-mono tracking-widest text-emerald-500 font-bold">Lunas (Paid)</span>
+                          <span className="bg-emerald-500/10 text-emerald-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                            {countPaid} Invoice
+                          </span>
+                        </div>
+                        <div className="text-base font-black text-slate-100 font-mono">
+                          {formatIDR(totalPaidSum)}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">Aliran kas masuk yang berhasil diamankan.</p>
+                      </div>
+
+                      {/* CARTU UNPAID */}
+                      <div className="bg-slate-950/30 p-3.5 rounded-xl border border-slate-800/60 hover:border-slate-800 transition-colors">
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="text-[10px] uppercase font-mono tracking-widest text-rose-500 font-bold">Tertunggak (Belum Bayar)</span>
+                          <span className="bg-rose-500/10 text-rose-400 text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-md border border-rose-500/20">
+                            {countUnpaid} Invoice
+                          </span>
+                        </div>
+                        <div className="text-base font-black text-slate-100 font-mono">
+                          {formatIDR(totalUnpaidSum)}
+                        </div>
+                        <p className="text-[10px] text-slate-500 mt-1">Target kolektibilitas penagihan gateway.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          )}
+
+          {/* ================= tab: onu ================= */}
+          {activeTab === 'onu' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <HardDrive className="w-5 h-5 text-indigo-400" />
+                    Monitoring Terminal ONU (Optic Network Unit)
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Status redaman, level laser, dan interkoneksi terminal pelanggan pada OLT GPON.</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    setOnuRefreshSpin(true);
+                    setTimeout(() => setOnuRefreshSpin(false), 1000);
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-bold px-3.5 py-1.5 rounded-lg transition text-xs flex items-center gap-2"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${onuRefreshSpin ? 'animate-spin' : ''}`} />
+                  Refresh OLT
+                </button>
+              </div>
+
+              {/* ONU stats summary panel */}
+              <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase">RATA-RATA REDAMAN</span>
+                  <span className="text-lg font-bold text-slate-300 font-mono">-21.4 dBm</span>
+                  <span className="text-[9px] text-emerald-400 block mt-0.5">Kondisi Normal/Optimal</span>
+                </div>
+                <div className="border-l border-slate-800 pl-4">
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase font-bold">PORT OLT TERPAKAI</span>
+                  <span className="text-lg font-bold text-slate-300 font-mono">4 Port GPON</span>
+                  <span className="text-[9px] text-slate-500 block mt-0.5">HUAWEI MA5608T</span>
+                </div>
+                <div className="border-l border-slate-800 pl-4">
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase font-bold">LOS WARNINGS</span>
+                  <span className="text-lg font-bold text-rose-500 font-mono">11 Offline</span>
+                  <span className="text-[9px] text-rose-500/80 block mt-0.5">FOC Kabel Terputus</span>
+                </div>
+                <div className="border-l border-slate-800 pl-4">
+                  <span className="text-[10px] text-slate-500 font-mono block uppercase font-bold">INDEX PEMBAGIAN</span>
+                  <span className="text-lg font-bold text-slate-300 font-mono font-bold">ODP 1:8 / 1:16</span>
+                  <span className="text-[9px] text-indigo-400 block mt-0.5">Rasio Optimal Bergaransi</span>
+                </div>
+              </div>
+
+              {/* Table of ONUs */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-slate-800 bg-slate-950/20 text-xs font-bold text-slate-300 flex items-center justify-between">
+                  <span>Daftar Terminal Lasercut ONU</span>
+                  <span className="font-mono text-[10px] text-slate-500">Total: {customers.length + 4} ONU Terdeteksi</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-mono text-[9px] uppercase">
+                        <th className="p-3">Pelanggan</th>
+                        <th className="p-3">Model ONU</th>
+                        <th className="p-3 col-span-2">GPON Interface ID</th>
+                        <th className="p-3">IP Node</th>
+                        <th className="p-3">Rx Power (Signal)</th>
+                        <th className="p-3">Status</th>
+                        <th className="p-3 text-right">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 font-sans text-slate-300">
+                      {customers.map((c, idx) => {
+                        const isEven = idx % 2 === 0;
+                        const rxPower = isEven ? '-19.45 dBm' : idx % 3 === 0 ? '-25.80 dBm' : '-22.10 dBm';
+                        const signalColor = idx % 3 === 0 ? 'text-amber-500' : 'text-emerald-400';
+                        return (
+                          <tr key={c.id} className="hover:bg-slate-800/40">
+                            <td className="p-3 font-semibold text-slate-200">
+                              {c.name}
+                              <span className="block text-[9px] text-slate-500 font-mono">{c.pppoeUsername}</span>
+                            </td>
+                            <td className="p-3 font-mono text-slate-400">{idx % 2 === 0 ? 'ZXHN F609 V5' : 'Huawei HG8245H'}</td>
+                            <td className="p-3 font-mono text-slate-400">1/1/2:{idx + 1}</td>
+                            <td className="p-3 font-mono text-slate-500">{c.ipAddress}</td>
+                            <td className={`p-3 font-mono font-bold ${signalColor}`}>{rxPower}</td>
+                            <td className="p-3">
+                              <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 font-mono text-[9px] font-black px-1.5 py-0.5 rounded-lg border border-emerald-500/10 uppercase">
+                                Active • On
+                              </span>
+                            </td>
+                            <td className="p-3 text-right">
+                              <button 
+                                onClick={() => {
+                                  setRebootingOnuId(c.id);
+                                  setTimeout(() => {
+                                    setRebootingOnuId(null);
+                                    alert(`ONU milik ${c.name} telah berhasil di-reboot jarak jauh (reboot system OK).`);
+                                  }, 1800);
+                                }}
+                                disabled={rebootingOnuId !== null}
+                                className="bg-slate-950 hover:bg-slate-800 hover:text-indigo-400 border border-slate-800 font-bold px-2 py-1 rounded text-[10px] transition"
+                              >
+                                {rebootingOnuId === c.id ? 'Rebooting...' : 'Reboot ONU'}
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {/* Simulated offline/LOS ONUs for visual depth */}
+                      <tr className="hover:bg-slate-800/40 bg-rose-500/5">
+                        <td className="p-3 font-semibold text-slate-200">
+                          Sudrajat Wibowo
+                          <span className="block text-[9px] text-slate-500 font-mono">sudrajat_wifi</span>
+                        </td>
+                        <td className="p-3 font-mono text-slate-400">FiberHome HG6145F</td>
+                        <td className="p-3 font-mono text-slate-400">1/1/3:4</td>
+                        <td className="p-3 font-mono text-slate-500">10.20.30.155</td>
+                        <td className="p-3 font-mono font-bold text-rose-500">LOS / Off</td>
+                        <td className="p-3">
+                          <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 font-mono text-[9px] font-black px-1.5 py-0.5 rounded-lg border border-rose-500/10 uppercase">
+                            OFFLINE • LOS
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="text-[10px] text-rose-400 font-bold px-2 block">Kabel Terputus</span>
+                        </td>
+                      </tr>
+                      <tr className="hover:bg-slate-800/40 bg-rose-500/5">
+                        <td className="p-3 font-semibold text-slate-200">
+                          Siti Aminah
+                          <span className="block text-[9px] text-slate-500 font-mono">siti_aminah</span>
+                        </td>
+                        <td className="p-3 font-mono text-slate-400">Huawei HG8546M</td>
+                        <td className="p-3 font-mono text-slate-400">1/1/4:18</td>
+                        <td className="p-3 font-mono text-slate-500">10.20.30.198</td>
+                        <td className="p-3 font-mono font-bold text-rose-400">-31.50 dBm</td>
+                        <td className="p-3">
+                          <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 font-mono text-[9px] font-black px-1.5 py-0.5 rounded-lg border border-rose-500/10 uppercase">
+                            OFFLINE • RE-D
+                          </span>
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="text-[10px] text-slate-500 px-2 block">Damping Over</span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: mikrotik ================= */}
+          {activeTab === 'mikrotik' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <Server className="w-5 h-5 text-indigo-400" />
+                    Monitoring MikroTik RouterBOARD
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Status CPU, RAM, suhu internal, alokasi IP DHCP Leases, ddan traffic PPPoE aktif.</p>
+                </div>
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs px-3 py-1.5 rounded-lg font-mono">
+                  <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse"></span>
+                  API CON: EX-TIK-01
+                </div>
+              </div>
+
+              {/* MikroTik specs & meters */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
+                
+                {/* System Specs Left Panel */}
+                <div className="md:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-md">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">Sistem Resources</h3>
+                    <p className="text-[10px] text-slate-500">Detail hardware MikroTik CCR2004 Core Router.</p>
+                  </div>
+
+                  <div className="space-y-3 font-mono text-xs">
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-500 font-bold">Router Model:</span>
+                      <span className="text-slate-200 font-semibold">CCR2004-16G-2S+PC</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-500 font-bold">RouterOS Ver:</span>
+                      <span className="text-slate-200 font-semibold">v7.12.1 (Stable)</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-500 font-bold">Uptime System:</span>
+                      <span className="text-slate-200 font-semibold">24d 18j 42m 11s</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-500 font-bold">Suhu CPU Core:</span>
+                      <span className="text-amber-400 font-semibold">41°C</span>
+                    </div>
+                    <div className="flex justify-between border-b border-slate-800 pb-1.5">
+                      <span className="text-slate-500 font-bold">Tegangan Listrik:</span>
+                      <span className="text-slate-200 font-semibold">24.1 V</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-bold">Total Sesi PPPoE:</span>
+                      <span className="text-indigo-400 font-bold">{customers.length} Terkoneksi</span>
+                    </div>
+                  </div>
+
+                  {/* CPU Load bar */}
+                  <div className="space-y-1.5 pt-2">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-500 uppercase font-black">CPU Load</span>
+                      <span className="text-slate-300 font-bold">14% (Average)</span>
+                    </div>
+                    <div className="w-full bg-slate-950 border border-slate-800 h-2.5 rounded-full overflow-hidden p-0.5">
+                      <div className="bg-indigo-400 h-full rounded-full transition-all duration-505" style={{ width: '14%' }} />
+                    </div>
+                  </div>
+
+                  {/* RAM Load bar */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px] font-mono">
+                      <span className="text-slate-500 uppercase font-black">Memory RAM Usage</span>
+                      <span className="text-slate-300 font-bold">142 MB / 1024 MB</span>
+                    </div>
+                    <div className="w-full bg-slate-950 border border-slate-800 h-2.5 rounded-full overflow-hidden p-0.5">
+                      <div className="bg-indigo-400 h-full rounded-full transition-all duration-505" style={{ width: '13.8%' }} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Router Live interface list */}
+                <div className="md:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md space-y-4">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">PPPoE Dial-In Active Sessions</h3>
+                    <p className="text-[10px] text-slate-500">Sesi user pppoe yang saat ini sedang melakukan dial jaringan internet Alijaya.</p>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-[11px] font-mono">
+                      <thead>
+                        <tr className="border-b border-slate-800 text-slate-400 text-[10px] uppercase">
+                          <th className="p-2 pl-0">User Session</th>
+                          <th className="p-2">IP Local IP Pool</th>
+                          <th className="p-2">Paket Kecepatan</th>
+                          <th className="p-2">Live Up-Rate</th>
+                          <th className="p-2">Uptime Sesi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800 text-slate-300">
+                        {customers.map((c, i) => {
+                          const plan = plans.find(p => p.id === c.activePlanId);
+                          const liveUp = i % 2 === 0 ? '1.54 Mbps' : '442 Kbps';
+                          const liveDown = i % 2 === 0 ? '8.40 Mbps' : '2.10 Mbps';
+                          return (
+                            <tr key={c.id}>
+                              <td className="p-2 pl-0 font-bold text-slate-200">{c.pppoeUsername}</td>
+                              <td className="p-2 text-slate-400">{c.ipAddress}</td>
+                              <td className="p-2 text-indigo-400 font-sans font-semibold">{plan ? plan.name : 'Unknown Plan'}</td>
+                              <td className="p-2 text-emerald-400 font-bold">▲ {liveUp} <span className="text-[9px] text-indigo-400 ml-1">▼ {liveDown}</span></td>
+                              <td className="p-2 text-slate-400">04:12:{i + 20}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: whatsapp_status ================= */}
+          {activeTab === 'whatsapp_status' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-indigo-400" />
+                    Status WhatsApp Gateway API Bot
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Pantau konektivitas Baileys Node Engine dan kirim pesan manual pengujian.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Connection detail status panel */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span className="text-xs font-bold font-mono text-slate-300 uppercase">Engine Status</span>
+                    {waConnectedUser ? (
+                      <span className="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg">
+                        🟢 CONNECTED
+                      </span>
+                    ) : (
+                      <span className="bg-rose-500/10 text-rose-400 border border-rose-500/20 text-[10px] font-mono font-bold px-2 py-0.5 rounded-lg">
+                        🔴 DISCONNECTED
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 text-xs font-mono">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-bold">Linked Phone:</span>
+                      <span className="text-slate-200">+62 823-1122-3344 (Alijaya Bot)</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-bold">Instance ID Secret:</span>
+                      <span className="text-slate-200 font-bold">inst_ajw_8432</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-bold">API Gateway URL:</span>
+                      <span className="text-indigo-400 underline">https://api.alijayawifi.com/v1</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-bold">Engine Core Base:</span>
+                      <span className="text-slate-200">Whatapp-Baileys Multidevice v5.2</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500 font-bold">Message Dispatched Today:</span>
+                      <span className="text-slate-200 font-bold">51 SMS / Pesan WA</span>
+                    </div>
+                  </div>
+
+                  {waConnectedUser ? (
+                    <div className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-3 text-xs text-emerald-400 flex items-start gap-2 max-w-md">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-bold block">Status Bot: Terhubung Sempurna</span>
+                        <span className="text-[11px] text-slate-400 mt-0.5 font-sans">Semua pengiriman invoice, isolir warning, dan tiket support akan dikirimkan otomatis ke handphone klien.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-4 border border-slate-800 bg-slate-950/60 rounded-xl flex flex-col items-center justify-center text-center py-6">
+                      <div className="p-3 bg-slate-900 border border-slate-800 rounded-lg mb-3">
+                        <RefreshCw className="w-6 h-6 text-indigo-400 animate-spin" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-300 block">Menunggu Autentikasi Scan</span>
+                      <span className="text-[10px] text-slate-500 block max-w-[240px] mt-1 font-sans">Silakan scan kode QR yang dihasilkan server dengan menu Link Device di app WhatsApp Anda.</span>
+                    </div>
+                  )}
+
+                  <div className="pt-2 font-sans">
+                    <button 
+                      onClick={() => setWaConnectedUser(!waConnectedUser)}
+                      className={`w-full py-2 rounded-lg text-xs font-bold transition ${
+                        waConnectedUser 
+                          ? 'bg-rose-500/15 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20' 
+                          : 'bg-emerald-500/15 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20'
+                      }`}
+                    >
+                      {waConnectedUser ? 'Matikan WhatsApp Gateway' : 'Hubungkan Kembali (Scan QR)'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Send test message manual box */}
+                <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md space-y-4">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">Kirim Pesan Uji Coba Manual</h3>
+                    <p className="text-[10px] text-slate-500">Gunakan form ini untuk melakukan pengetesan integrasi API bot WhatsApp Alijaya.</p>
+                  </div>
+
+                  <form 
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      setWaSendingTest(true);
+                      setTimeout(() => {
+                        setWaSendingTest(false);
+                        setBroadcastLogs(prev => [
+                          ...prev,
+                          `[WA PENGETESAN] API trigger message dispatched to phone: ${waTestNumber}`
+                        ]);
+                        alert(`Sukses mengirimkan pesan uji coba manual ke nomor ${waTestNumber}`);
+                        setWaTestNumber('');
+                      }, 1000);
+                    }}
+                    className="space-y-3 text-xs"
+                  >
+                    <div className="space-y-1 font-sans">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono block">No. WhatsApp Penerima</label>
+                      <input 
+                        type="tel" 
+                        placeholder="Contoh: +628123456789" 
+                        value={waTestNumber}
+                        onChange={e => setWaTestNumber(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-slate-200 font-mono focus:outline-none focus:border-slate-700"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1 font-sans">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono block">Draft Isi Pesan</label>
+                      <textarea 
+                        rows={3}
+                        placeholder="Ketik isi pesan teks..." 
+                        value={waTestMessage}
+                        onChange={e => setWaTestMessage(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 p-2.5 rounded-lg text-slate-200 font-sans focus:outline-none focus:border-slate-700 leading-relaxed"
+                        required
+                      />
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={waSendingTest || !waConnectedUser}
+                      className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-bold rounded-lg transition text-xs font-sans"
+                    >
+                      {waSendingTest ? 'Mengirimkan...' : 'Kirim Pesan Pengetesan'}
+                    </button>
+                  </form>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: whatsapp_broadcast ================= */}
+          {activeTab === 'whatsapp_broadcast' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <Megaphone className="w-5 h-5 text-indigo-400" />
+                    WhatsApp Billing Reminder Broadcaster
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Kirim peringatan bill secara massal ke no WA terdaftar milik customer secara aman.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+                
+                {/* Broadcast Composer Form Left */}
+                <div className="md:col-span-7 bg-slate-900 border border-slate-800 p-5 rounded-2xl shadow-md space-y-4 animate-fade-in">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">Template Composer (Template WA)</h3>
+                    <p className="text-[10px] text-slate-500">Anda dapat menyematkan keyword macro dinamis: {'{nama}'}, {'{paket}'}, {'{jumlah}'}, {'{periode}'}, {'{jatuh_tempo}'}</p>
+                  </div>
+
+                  <div className="space-y-4 text-xs">
+                    
+                    {/* Selector of Target Group */}
+                    <div className="space-y-1 font-sans">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono block">Segmen Target Kirim</label>
+                      <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                          <input 
+                            type="radio" 
+                            name="target_b" 
+                            value="unpaid"
+                            checked={selectedBroadcastFilter === 'unpaid'}
+                            onChange={() => setSelectedBroadcastFilter('unpaid')}
+                            className="bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0" 
+                          />
+                          Pelanggan Belum Bayar ({countUnpaid} Orang)
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer text-slate-300">
+                          <input 
+                            type="radio" 
+                            name="target_b" 
+                            value="all"
+                            checked={selectedBroadcastFilter === 'all'}
+                            onChange={() => setSelectedBroadcastFilter('all')}
+                            className="bg-slate-950 border-slate-800 text-indigo-600 focus:ring-0 focus:ring-offset-0" 
+                          />
+                          Semua Pelanggan ({customers.length} Orang)
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Template draft box */}
+                    <div className="space-y-1 font-sans">
+                      <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono block">Isi Konten Broadcast</label>
+                      <textarea
+                        rows={6} 
+                        value={broadcastTemplate}
+                        onChange={e => setBroadcastTemplate(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-800 p-3 rounded-xl block leading-relaxed text-slate-200 font-sans focus:outline-none focus:border-slate-700"
+                        placeholder="Tuliskan draft template broadcast..."
+                      />
+                    </div>
+
+                    {/* Simulation trigger */}
+                    <div className="font-sans">
+                      <button 
+                        onClick={() => {
+                          if (broadcastProgress !== null) return;
+                          
+                          setBroadcastProgress(0);
+                          setBroadcastLogs(prev => [...prev, `[BROADCAST START] Menginisiasi pengiriman massal ke target WA...`]);
+                          
+                          const interval = setInterval(() => {
+                            setBroadcastProgress(prev => {
+                              if (prev === null) {
+                                clearInterval(interval);
+                                return null;
+                              }
+                              const next = prev + 20;
+                              if (next >= 100) {
+                                clearInterval(interval);
+                                setTimeout(() => {
+                                  setBroadcastProgress(null);
+                                  setBroadcastLogs(l => [...l, `[BROADCAST COMPLETED] Pengiriman selesai sepenuhnya.`]);
+                                  alert('Pengiriman broadcast peringatan tagihan massal telah selesai diproses.');
+                                }, 500);
+                                return 100;
+                              }
+                              
+                              // Add simulated log
+                              const custIndex = Math.min(Math.floor((next / 100) * customers.length), customers.length - 1);
+                              const targetCust = customers[custIndex];
+                              if (targetCust) {
+                                setBroadcastLogs(l => [
+                                  ...l,
+                                  `[BROADCAST DISPATCH] Sent to +62 821-xxxx-${targetCust.id.substring(5,9)} [${targetCust.name}] - Delivered OK.`
+                                ]);
+                              }
+                              return next;
+                            });
+                          }, 1000);
+                        }}
+                        disabled={broadcastProgress !== null}
+                        className="w-full py-2.5 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-400 hover:to-indigo-505 text-slate-100 font-bold rounded-xl text-xs active:scale-95 transition"
+                      >
+                        {broadcastProgress !== null ? `Mengeksekusi Broadcast (${broadcastProgress}%)` : `Mulai Jalankan Broadcast Tagihan massal WA`}
+                      </button>
+                    </div>
+
+                    {/* Progress Bar indicator */}
+                    {broadcastProgress !== null && (
+                      <div className="space-y-1">
+                        <div className="w-full bg-slate-950 border border-slate-800 h-3 rounded-full overflow-hidden p-0.5">
+                          <div className="bg-indigo-400 h-full rounded-full transition-all duration-300" style={{ width: `${broadcastProgress}%` }} />
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+
+                {/* Broadcast Live Logs Right */}
+                <div className="md:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-md flex flex-col justify-between overflow-hidden">
+                  <div>
+                    <h3 className="text-xs font-black text-slate-200 tracking-wider font-mono uppercase">Audit Logs Transparansi Dispatched</h3>
+                    <p className="text-[10px] text-slate-500">Konsol log real-time transaksi broadcast dari node multidevice.</p>
+                  </div>
+
+                  <div className="bg-slate-950 border border-slate-800/80 rounded-xl p-3 h-56 md:h-72 my-3 overflow-y-auto font-mono text-[10px] text-indigo-400 space-y-1 shadow-inner custom-scrollbar">
+                    {broadcastLogs.map((log, idx) => (
+                      <div key={idx} className="leading-relaxed border-b border-slate-900/50 pb-1 last:border-b-0">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+
+                  <button 
+                    onClick={() => setBroadcastLogs(['[WA DB] Konsol log dibebaskan kembali. Sedia memantau.'])}
+                    className="w-full py-1.5 bg-slate-950 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-[10px] font-bold border border-slate-850 rounded-lg transition font-sans"
+                  >
+                    Bersihkan Log Konsol
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: paket ================= */}
+          {activeTab === 'paket' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <Layers className="w-5 h-5 text-indigo-400" />
+                    Manajemen Paket Jasa Internet
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Konfigurasi bandwidth upload/download dan harga bulanan paket internet pelanggan Alijaya.</p>
+                </div>
+              </div>
+
+              {/* Roster of Plans */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {plans.map(p => {
+                  return (
+                    <div key={p.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl relative overflow-hidden shadow-sm flex flex-col justify-between h-48 group hover:border-indigo-500/20 transition duration-300">
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="bg-indigo-500/10 text-indigo-400 text-[9px] font-mono font-bold px-2 py-0.5 rounded-lg border border-indigo-500/20">
+                            ID: {p.id}
+                          </span>
+                          <span className="text-[10px] font-bold text-emerald-400 font-mono">Fiber FTTH</span>
+                        </div>
+                        <h3 className="text-sm font-extrabold text-slate-100 group-hover:text-indigo-400 transition">{p.name}</h3>
+                        <p className="text-[11px] text-slate-500 mt-1 leading-relaxed line-clamp-2">{p.description}</p>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-800/80 gap-1 flex flex-col">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-base font-black text-slate-200 font-mono">{formatIDR(p.price)}</span>
+                          <span className="text-[9px] text-slate-500">/bulan</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400 flex items-center gap-2">
+                          <span>Speed: <span className="text-indigo-400 font-bold">{p.speedMbps} Mbps</span></span>
+                          <span className="text-slate-600">•</span>
+                          <span>FUP: Unlimited</span>
+                        </div>
+                      </div>
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-tr from-transparent to-indigo-500/5 blur-xl group-hover:to-indigo-500/10 transition animate-pulse" />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: laporan ================= */}
+          {activeTab === 'laporan' && (
+            <div className="space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-indigo-400" />
+                    Laporan Keuangan & Buku Ledger Kas
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Laporan komparasi invoice lunas, target penerimaan bulanan, dan audit slip pembayaran.</p>
+                </div>
+                <button 
+                  onClick={() => alert('Mensimulasikan cetak printout ledger ke format Excel/CSV. File siap unduh.')}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition font-sans"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Cetak Excel Laporan
+                </button>
+              </div>
+
+              {/* Cash bookkeeping cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                  <span className="text-[9px] text-slate-500 font-mono block uppercase">PENDAPATAN LUNAS (CASH RECOVERED)</span>
+                  <span className="text-xl font-black text-emerald-400 font-mono">{formatIDR(totalPaidSum)}</span>
+                  <span className="text-[9px] text-emerald-500 mt-1 block">Dari {countPaid} tagihan terselesaikan.</span>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                  <span className="text-[9px] text-slate-500 font-mono block uppercase">PIUTANG BERJALAN (RECEIVABLES ACCRUED)</span>
+                  <span className="text-xl font-black text-rose-500 font-mono">{formatIDR(totalUnpaidSum)}</span>
+                  <span className="text-[9px] text-rose-400 mt-1 block">Dari {countUnpaid} tagihan belum dibayar.</span>
+                </div>
+                <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+                  <span className="text-[9px] text-slate-500 font-mono block uppercase">PENDAPATAN PROYEKSI MAKSIMAL (MRR CAP)</span>
+                  <span className="text-xl font-black text-slate-200 font-mono">{formatIDR(totalCombineSum)}</span>
+                  <span className="text-[9px] text-indigo-400 mt-1 block">Rasio lunas efisiensi: {recoveryEfficiency}%</span>
+                </div>
+              </div>
+
+              {/* Completed Payment Ledger Table */}
+              <div className="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-sm">
+                <div className="p-4 border-b border-slate-800 bg-slate-950/20 text-xs font-bold text-slate-300">
+                  Riwayat Audit Penerimaan Lunas
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 font-mono text-[9px] uppercase">
+                        <th className="p-3">Ref ID Tagihan</th>
+                        <th className="p-3">Klien Pembayar</th>
+                        <th className="p-3">Periode Rekening</th>
+                        <th className="p-3">Jumlah Transaksi</th>
+                        <th className="p-3">Metode Bayar</th>
+                        <th className="p-3 text-right">Status Ledger</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800 text-slate-300">
+                      {invoices.filter(i => i.status === 'paid').map(i => {
+                        return (
+                          <tr key={i.id} className="hover:bg-slate-800/20">
+                            <td className="p-3 font-mono font-bold text-indigo-400">{i.id}</td>
+                            <td className="p-3 font-semibold text-slate-200">{i.customerName}</td>
+                            <td className="p-3 text-slate-400 font-mono">{i.period}</td>
+                            <td className="p-3 font-mono text-emerald-400 font-bold">{formatIDR(i.amount)}</td>
+                            <td className="p-3 font-sans">
+                              {i.id.endsWith('1') ? (
+                                <span className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1 w-max">
+                                  <Check className="w-3 h-3" /> GoPay Virtual Account
+                                </span>
+                              ) : (
+                                <span className="bg-indigo-500/10 text-indigo-400 text-[10px] font-bold px-2 py-0.5 rounded border border-indigo-500/20 flex items-center gap-1 w-max">
+                                  <Check className="w-3 h-3" /> Manual Persetujuan Admin
+                                </span>
+                              )}
+                            </td>
+                            <td className="p-3 text-right">
+                              <span className="inline-block bg-slate-950 border border-slate-850 text-slate-400 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded">
+                                CLOSED • SETTLED
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {invoices.filter(i => i.status === 'paid').length === 0 && (
+                        <tr>
+                          <td colSpan={6} className="text-center p-8 text-slate-500 font-sans">
+                            Belum ada transaksi lunas terdaftar dalam riwayat pembayaran.
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: teknisi ================= */}
+          {activeTab === 'teknisi' && (
+            <div className="space-y-6 animate-fade-in">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-900 pb-3 gap-2">
+                <div>
+                  <h1 className="text-xl font-extrabold tracking-tight text-slate-100 flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-indigo-400" />
+                    Manajemen Roster & Penugasan Teknisi
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">Daftar personil maintenance lapangan, sektor operasional area, ddan status kelayakan penanganan.</p>
+                </div>
+              </div>
+
+              {/* Roster database of staff */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {[
+                  {
+                    id: 'tech-bambang',
+                    name: 'Bambang Santoso',
+                    skills: 'Splicing FO Core, OPM Trace, OSP Overhead',
+                    zone: 'Sektor Barat (Alijaya Utara)',
+                    phone: '+62 821-2233-1100',
+                    status: 'Tersedia',
+                    currentTask: 'None'
+                  },
+                  {
+                    id: 'tech-andi',
+                    name: 'Andi Kuswira',
+                    skills: 'Setting Mikrotik PPPoE, Dynamic Routing DHCP',
+                    zone: 'Sektor Pusat (Alijaya Tengah)',
+                    phone: '+62 819-4560-8800',
+                    status: 'Selesai Tugas',
+                    currentTask: 'Maintenance Redaman di ODP Seroja'
+                  },
+                  {
+                    id: 'tech-hendra',
+                    name: 'Hendra Saputra',
+                    skills: 'Splicing Dropcore, CATV Cable, ONU Configuration',
+                    zone: 'Sektor Selatan (Alijaya Selatan)',
+                    phone: '+62 858-9900-1122',
+                    status: 'Di Lapangan',
+                    currentTask: 'Penarikan Dropcore Baru Klien Lestari'
+                  }
+                ].map(tech => {
+                  const statusColors = 
+                    tech.status === 'Tersedia' 
+                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                      : tech.status === 'Selesai Tugas'
+                        ? 'bg-slate-500/10 text-slate-300 border-slate-500/20'
+                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20';
+                  return (
+                    <div key={tech.id} className="bg-slate-900 border border-slate-800 p-5 rounded-2xl relative shadow-sm flex flex-col justify-between group">
+                      <div>
+                        <div className="flex items-center justify-between mb-3 font-sans">
+                          <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded border uppercase ${statusColors}`}>
+                            {tech.status}
+                          </span>
+                          <span className="text-[10px] text-slate-500 font-mono">TK-ID: {tech.id}</span>
+                        </div>
+                        <h3 className="text-sm font-extrabold text-slate-100 group-hover:text-indigo-400 transition">{tech.name}</h3>
+                        <p className="text-[11px] text-indigo-400 mt-1 font-semibold font-sans">{tech.zone}</p>
+                        
+                        <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-800/80 text-[11px] leading-relaxed">
+                          <div>
+                            <span className="text-slate-500 block">Keahlian Lapangan:</span>
+                            <span className="text-slate-300 block">{tech.skills}</span>
+                          </div>
+                          <div className="pt-1.5">
+                            <span className="text-slate-500 block font-sans">Penugasan Aktif:</span>
+                            <span className="text-slate-400 block font-mono">{tech.currentTask}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="pt-3 border-t border-slate-801 mt-4 flex items-center justify-between">
+                        <span className="text-[10px] text-slate-500 font-mono">{tech.phone}</span>
+                        <button 
+                          onClick={() => alert(`Sistem men-trigger WhatsApp direct message ke teknisi ${tech.name}`)}
+                          className="p-1 px-3.5 bg-slate-950 hover:bg-slate-800 text-slate-300 text-[10px] font-bold border border-slate-800 rounded transition font-sans"
+                        >
+                          Hubungi Teknisi
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* ================= tab: customers (existing customers panel) ================= */}
+          {activeTab === 'customers' && (
+            <div className="space-y-4">
           
           {/* Controls Bar */}
           <div className="flex flex-col sm:flex-row gap-3 justify-between items-start sm:items-center">
@@ -1637,7 +2903,9 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
       )}
 
-    </div>
+          </main>
+        </div>
+      </div>
   );
 };
 

@@ -377,6 +377,34 @@ export default function App() {
 
   const activeCustomerObj = customers.find(c => c.id === activeCustomerId);
 
+  if (currentView === 'admin' && adminAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex font-sans select-none selection:bg-emerald-500/20 antialiased">
+        <AdminPanel 
+          customers={customers} 
+          plans={plans} 
+          invoices={invoices} 
+          tickets={tickets} 
+          onAddCustomer={handleAddCustomer}
+          onImportCustomers={handleImportCustomers}
+          onUpdateCustomerStatus={handleUpdateCustomerStatus}
+          onUpdateCustomerPlan={handleUpdateCustomerPlan}
+          onDeleteCustomer={handleDeleteCustomer}
+          onNewInvoice={handleNewInvoice}
+          onApproveInvoiceManual={handleApproveInvoiceManual}
+          onSendTicketReply={handleSendTicketReply}
+          onUpdateTicketStatus={handleUpdateTicketStatus}
+          onUpdatePassword={handleUpdatePassword}
+          currentPasswordValue={adminPassword}
+          onLogout={() => {
+            handleLogout();
+            setCurrentView('client');
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans select-none selection:bg-emerald-500/20 antialiased">
       
@@ -427,16 +455,6 @@ export default function App() {
 
             {/* RESET BUTTON */}
             <div className="hidden md:flex items-center gap-3">
-              {currentView === 'admin' && adminAuthenticated && (
-                <button
-                  onClick={handleLogout}
-                  className="text-[10px] bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 hover:text-rose-300 font-bold px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1.5"
-                  title="Lock Sesi Admin"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Kunci Sesi
-                </button>
-              )}
               <span className="text-[10px] text-slate-500 font-mono flex items-center gap-1 bg-slate-950 px-2 py-1 rounded border border-slate-800">
                 <Globe className="w-3 h-3 text-emerald-400" />
                 SERVER OK
@@ -502,7 +520,7 @@ export default function App() {
               Profil pelanggan terpilih tidak ditemukan. Atur ulang database Anda.
             </div>
           )
-        ) : !adminAuthenticated ? (
+        ) : (
           <div className="py-12 flex items-center justify-center">
             <form onSubmit={handleLoginSubmit} className="max-w-md w-full mx-auto bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-2xl shadow-xl space-y-6">
               <div className="text-center space-y-2">
@@ -573,24 +591,6 @@ export default function App() {
               </div>
             </form>
           </div>
-        ) : (
-          <AdminPanel 
-            customers={customers} 
-            plans={plans} 
-            invoices={invoices} 
-            tickets={tickets} 
-            onAddCustomer={handleAddCustomer}
-            onImportCustomers={handleImportCustomers}
-            onUpdateCustomerStatus={handleUpdateCustomerStatus}
-            onUpdateCustomerPlan={handleUpdateCustomerPlan}
-            onDeleteCustomer={handleDeleteCustomer}
-            onNewInvoice={handleNewInvoice}
-            onApproveInvoiceManual={handleApproveInvoiceManual}
-            onSendTicketReply={handleSendTicketReply}
-            onUpdateTicketStatus={handleUpdateTicketStatus}
-            onUpdatePassword={handleUpdatePassword}
-            currentPasswordValue={adminPassword}
-          />
         )}
 
       </main>
